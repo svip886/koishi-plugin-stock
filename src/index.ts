@@ -1,43 +1,65 @@
 import { Context, Schema } from 'koishi'
 
 export interface Config {
-  blacklistedUsers?: string[]
-  blacklistedChannels?: string[]
+  activeMarketCapBlacklist?: string[]
+  stockAlertBlacklist?: string[]
+  limitUpBoardBlacklist?: string[]
+  stockSelectionBlacklist?: string[]
+  allCommandsBlacklist?: string[]
 }
 
 export const Config: Schema<Config> = Schema.object({
-  blacklistedUsers: Schema.array(String).description('黑名单用户ID'),
-  blacklistedChannels: Schema.array(String).description('黑名单频道ID'),
+  allCommandsBlacklist: Schema.array(String).description('全部指令黑名单用户ID'),
+  activeMarketCapBlacklist: Schema.array(String).description('活跃市值指令黑名单用户ID'),
+  stockAlertBlacklist: Schema.array(String).description('异动指令黑名单用户ID'),
+  limitUpBoardBlacklist: Schema.array(String).description('涨停看板指令黑名单用户ID'),
+  stockSelectionBlacklist: Schema.array(String).description('选股指令黑名单用户ID'),
 })
 
 export function apply(ctx: Context, config: Config) {
-  // 检查是否在黑名单中
-  function isBlacklisted(session) {
-    const userId = session.userId
-    const channelId = session.channelId
+  // 检查用户是否在特定指令的黑名单中
+  function isUserInSpecificBlacklist(session, commandName: string) {
+    const userId = session.userId;
     
-    if (config.blacklistedUsers?.includes(userId)) {
-      return true
+    // 检查特定指令黑名单
+    switch(commandName) {
+      case '活跃市值':
+        if (config.activeMarketCapBlacklist?.includes(userId)) {
+          return true;
+        }
+        break;
+      case '异动':
+        if (config.stockAlertBlacklist?.includes(userId)) {
+          return true;
+        }
+        break;
+      case '涨停看板':
+        if (config.limitUpBoardBlacklist?.includes(userId)) {
+          return true;
+        }
+        break;
+      case '选股':
+        if (config.stockSelectionBlacklist?.includes(userId)) {
+          return true;
+        }
+        break;
     }
     
-    if (config.blacklistedChannels?.includes(channelId)) {
-      return true
+    // 检查全局黑名单
+    if (config.allCommandsBlacklist?.includes(userId)) {
+      return true;
     }
     
-    return false
+    return false;
   }
-  
-  // 注册全局中间件检查黑名单
-  ctx.middleware(async (session, next) => {
-    if (isBlacklisted(session)) {
-      return '您已被加入黑名单，无法使用此功能。'
-    }
-    return next()
-  })
 
   // 监听活跃市值命令
   ctx.command('活跃市值', '获取活跃市值数据')
     .action(async ({ session }) => {
+      if (isUserInSpecificBlacklist(session, '活跃市值')) {
+        return '您已被加入黑名单，无法使用此功能。';
+      }
+      
       try {
         // 使用Koishi的HTTP服务发起请求获取数据
         // 根据测试，API返回的是文本格式而非JSON
@@ -54,6 +76,10 @@ export function apply(ctx: Context, config: Config) {
   // 监听异动命令，接受股票代码参数
   ctx.command('异动 <stockCode:text>', '获取指定股票的异动分析数据')
     .action(async ({ session }, stockCode) => {
+      if (isUserInSpecificBlacklist(session, '异动')) {
+        return '您已被加入黑名单，无法使用此功能。';
+      }
+      
       if (!stockCode) {
         return '请输入股票代码，格式：异动 [股票代码]'
       }
@@ -73,6 +99,10 @@ export function apply(ctx: Context, config: Config) {
   // 监听涨停看板命令
   ctx.command('涨停看板', '获取涨停看板图片')
     .action(async ({ session }) => {
+      if (isUserInSpecificBlacklist(session, '涨停看板')) {
+        return '您已被加入黑名单，无法使用此功能。';
+      }
+      
       try {
         // 使用Koishi的HTTP服务下载图片
         const imageUrl = 'http://stock.svip886.com/api/limit_up.png';
@@ -94,6 +124,10 @@ export function apply(ctx: Context, config: Config) {
   // 监听选股命令
   ctx.command('选股 <strategy:text>', '根据指定策略选股（支持策略：N型、填坑、少妇、突破、补票、少妇pro）')
     .action(async ({ session }, strategy) => {
+      if (isUserInSpecificBlacklist(session, '选股')) {
+        return '您已被加入黑名单，无法使用此功能。';
+      }
+      
       if (!strategy) {
         return '请输入选股策略，格式：选股 [策略名称或编号]\n支持的策略：N型(1)、填坑(2)、少妇(3)、突破(4)、补票(5)、少妇pro(6)';
       }
@@ -141,10 +175,13 @@ export function apply(ctx: Context, config: Config) {
 
   // 使用中间件方式监听特定关键词（作为备用方案）
   ctx.middleware(async (session, next) => {
-    // 黑名单检查已经通过全局中间件处理
     const content = session.content?.trim();
     
     if (content === '活跃市值') {
+      if (isUserInSpecificBlacklist(session, '活跃市值')) {
+        return '您已被加入黑名单，无法使用此功能。';
+      }
+      
       try {
         // 使用Koishi的HTTP服务发起请求获取数据
         const responseText = await ctx.http.get('http://stock.svip886.com/api/indexes', { responseType: 'text' })
@@ -156,6 +193,10 @@ export function apply(ctx: Context, config: Config) {
         return '获取活跃市值数据失败，请稍后重试。'
       }
     } else if (content?.startsWith('异动 ')) {
+      if (isUserInSpecificBlacklist(session, '异动')) {
+        return '您已被加入黑名单，无法使用此功能。';
+      }
+      
       // 解析股票代码
       const match = content.match(/^异动\s+(.+)$/);
       if (match) {
@@ -173,6 +214,10 @@ export function apply(ctx: Context, config: Config) {
         }
       }
     } else if (content === '涨停看板') {
+      if (isUserInSpecificBlacklist(session, '涨停看板')) {
+        return '您已被加入黑名单，无法使用此功能。';
+      }
+      
       try {
         // 使用Koishi的HTTP服务下载图片
         const imageUrl = 'http://stock.svip886.com/api/limit_up.png';
@@ -190,6 +235,10 @@ export function apply(ctx: Context, config: Config) {
         return '获取涨停看板图片失败，请稍后重试。';
       }
     } else if (content?.startsWith('选股 ')) {
+      if (isUserInSpecificBlacklist(session, '选股')) {
+        return '您已被加入黑名单，无法使用此功能。';
+      }
+      
       // 解析选股策略
       const match = content.match(/^选股\s+(.+)$/);
       if (match) {
