@@ -4,6 +4,7 @@ export interface Config {
     stockAlertBlacklist?: string[];
     limitUpBoardBlacklist?: string[];
     stockSelectionBlacklist?: string[];
+    rideBlacklist?: string[];
     allCommandsBlacklist?: string[];
 }
 export declare const Config: Schema<Config>;

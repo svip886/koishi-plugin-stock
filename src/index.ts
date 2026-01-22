@@ -5,6 +5,7 @@ export interface Config {
   stockAlertBlacklist?: string[]
   limitUpBoardBlacklist?: string[]
   stockSelectionBlacklist?: string[]
+  rideBlacklist?: string[]
   allCommandsBlacklist?: string[]
 }
 
@@ -14,6 +15,7 @@ export const Config: Schema<Config> = Schema.object({
   stockAlertBlacklist: Schema.array(String).description('异动指令黑名单用户ID'),
   limitUpBoardBlacklist: Schema.array(String).description('涨停看板指令黑名单用户ID'),
   stockSelectionBlacklist: Schema.array(String).description('选股指令黑名单用户ID'),
+  rideBlacklist: Schema.array(String).description('骑指令黑名单用户ID'),
 })
 
 export function apply(ctx: Context, config: Config) {
@@ -40,6 +42,11 @@ export function apply(ctx: Context, config: Config) {
         break;
       case '选股':
         if (config.stockSelectionBlacklist?.includes(userId)) {
+          return true;
+        }
+        break;
+      case '骑':
+        if (config.rideBlacklist?.includes(userId)) {
           return true;
         }
         break;
@@ -173,6 +180,25 @@ export function apply(ctx: Context, config: Config) {
       }
     });
 
+  // 监听骑命令
+  ctx.command('骑', '获取骑图片')
+    .action(async ({ session }) => {
+      if (isUserInSpecificBlacklist(session, '骑')) {
+        return '您已被加入黑名单，无法使用此功能。';
+      }
+      
+      try {
+        // 使用Koishi的资源系统来访问本地图片
+        const imagePath = './images/qi.jpeg';
+        
+        // 返回本地图片
+        return `<img src="${imagePath}" />`;
+      } catch (error) {
+        console.error('获取骑图片失败:', error);
+        return '获取骑图片失败，请稍后重试。';
+      }
+    });
+
   // 使用中间件方式监听特定关键词（作为备用方案）
   ctx.middleware(async (session, next) => {
     const content = session.content?.trim();
@@ -283,6 +309,21 @@ export function apply(ctx: Context, config: Config) {
           console.error('获取选股数据失败:', error);
           return `获取【${strategy}】选股数据失败，请稍后重试。`;
         }
+      }
+    } else if (content === '骑') {
+      if (isUserInSpecificBlacklist(session, '骑')) {
+        return '您已被加入黑名单，无法使用此功能。';
+      }
+      
+      try {
+        // 使用Koishi的资源系统来访问本地图片
+        const imagePath = './images/qi.jpeg';
+        
+        // 返回本地图片
+        return `<img src="${imagePath}" />`;
+      } catch (error) {
+        console.error('获取骑图片失败:', error);
+        return '获取骑图片失败，请稍后重试。';
       }
     }
     
