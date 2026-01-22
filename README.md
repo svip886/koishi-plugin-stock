@@ -1,6 +1,6 @@
 # koishi-plugin-stock
 
-一个Koishi插件，当用户发送"活跃市值"时自动获取股票市值数据并回复。
+一个Koishi插件，当用户发送特定命令时自动获取股票数据并显示结果。支持活跃市值、异动分析、涨停看板和选股功能，并提供指令级黑名单配置。
 
 ## 功能
 
@@ -8,18 +8,30 @@
 - 用户发送"异动 [股票代码]"命令时，自动从 http://stock.svip886.com/api/analyze?code=[股票代码] 获取指定股票的异动分析数据
 - 用户发送"涨停看板"命令时，自动下载 http://stock.svip886.com/api/limit_up.png 图片并显示
 - 用户发送"选股 [策略名称]"命令时，自动从 http://stock.svip886.com/api/dyq_select/[策略API名] 获取选股结果
+- 支持为每个指令单独设置黑名单，可限制特定用户使用特定功能
 - 自动格式化数据显示给用户
 
 ## 安装
 
 ```bash
-npm install koishi-plugin-market-value
+npm install koishi-plugin-stock
 ```
 
 ## 配置
 
-此插件无需配置。
+此插件支持以下配置选项：
+
+- `allCommandsBlacklist`: 全部指令黑名单用户ID数组
+- `activeMarketCapBlacklist`: 活跃市值指令黑名单用户ID数组
+- `stockAlertBlacklist`: 异动指令黑名单用户ID数组
+- `limitUpBoardBlacklist`: 涨停看板指令黑名单用户ID数组
+- `stockSelectionBlacklist`: 选股指令黑名单用户ID数组
 
 ## 使用
 
-在聊天中输入"活跃市值"即可获取最新的市值数据。
+- 发送"活跃市值"获取最新的市场指数数据
+- 发送"异动 [股票代码]"获取指定股票的异动分析，如"异动 000001"
+- 发送"涨停看板"获取涨停股票看板图片
+- 发送"选股 [策略名称或编号]"获取选股结果，支持的策略：N型(1)、填坑(2)、少妇(3)、突破(4)、补票(5)、少妇pro(6)
+
+配置黑名单可在插件设置中进行，将特定用户ID添加到相应指令的黑名单中即可限制其使用权限。
