@@ -65,29 +65,35 @@ export function apply(ctx: Context) {
   ctx.command('选股 <strategy:text>', '根据指定策略选股（支持策略：N型、填坑、少妇、突破、补票、少妇pro）')
     .action(async ({ session }, strategy) => {
       if (!strategy) {
-        return '请输入选股策略，格式：选股 [策略名称或编号]\n支持的策略：N型(n_shape)、填坑(fill_pit)、少妇(young_woman)、突破(breakthrough)、补票(ticket)、少妇pro(young_woman_pro)';
+        return '请输入选股策略，格式：选股 [策略名称或编号]\n支持的策略：N型(1)、填坑(2)、少妇(3)、突破(4)、补票(5)、少妇pro(6)';
       }
       
       // 映射策略名称到API端点
       const strategyMap = {
         'N型': 'n_shape',
         'n_shape': 'n_shape',
+        '1': 'n_shape',
         '填坑': 'fill_pit',
         'fill_pit': 'fill_pit',
+        '2': 'fill_pit',
         '少妇': 'young_woman',
         'young_woman': 'young_woman',
+        '3': 'young_woman',
         '突破': 'breakthrough',
         'breakthrough': 'breakthrough',
+        '4': 'breakthrough',
         '补票': 'ticket',
         'ticket': 'ticket',
+        '5': 'ticket',
         '少妇pro': 'young_woman_pro',
         'young_woman_pro': 'young_woman_pro',
+        '6': 'young_woman_pro',
       };
       
       const apiStrategy = strategyMap[strategy.trim()];
       
       if (!apiStrategy) {
-        return `不支持的选股策略：${strategy}\n支持的策略：N型(n_shape)、填坑(fill_pit)、少妇(young_woman)、突破(breakthrough)、补票(ticket)、少妇pro(young_woman_pro)`;
+        return `不支持的选股策略：${strategy}\n支持的策略：N型(1)、填坑(2)、少妇(3)、突破(4)、补票(5)、少妇pro(6)`;
       }
       
       try {
@@ -113,7 +119,7 @@ export function apply(ctx: Context) {
         const responseText = await ctx.http.get('http://stock.svip886.com/api/indexes', { responseType: 'text' })
         
         // 直接返回API返回的数据
-        return `📊 活跃市值数据：\n\n${responseText}`
+        return `📊 指数看板：\n\n${responseText}`
       } catch (error) {
         console.error('获取活跃市值数据失败:', error)
         return '获取活跃市值数据失败，请稍后重试。'
@@ -129,7 +135,7 @@ export function apply(ctx: Context) {
           const responseText = await ctx.http.get(`http://stock.svip886.com/api/analyze?code=${stockCode}`, { responseType: 'text' })
           
           // 直接返回API返回的数据
-          return `📈 股票 ${stockCode} 异动分析：\n\n${responseText}`
+          return `📈 异动分析：\n\n${responseText}`
         } catch (error) {
           console.error('获取股票异动数据失败:', error)
           return `获取股票 ${stockCode} 异动数据失败，请稍后重试。`
@@ -162,22 +168,28 @@ export function apply(ctx: Context) {
       const strategyMap = {
         'N型': 'n_shape',
         'n_shape': 'n_shape',
+        '1': 'n_shape',
         '填坑': 'fill_pit',
         'fill_pit': 'fill_pit',
+        '2': 'fill_pit',
         '少妇': 'young_woman',
         'young_woman': 'young_woman',
+        '3': 'young_woman',
         '突破': 'breakthrough',
         'breakthrough': 'breakthrough',
+        '4': 'breakthrough',
         '补票': 'ticket',
         'ticket': 'ticket',
+        '5': 'ticket',
         '少妇pro': 'young_woman_pro',
         'young_woman_pro': 'young_woman_pro',
+        '6': 'young_woman_pro',
       };
       
       const apiStrategy = strategyMap[strategy];
       
       if (!apiStrategy) {
-        return `不支持的选股策略：${strategy}\n支持的策略：N型(n_shape)、填坑(fill_pit)、少妇(young_woman)、突破(breakthrough)、补票(ticket)、少妇pro(young_woman_pro)`;
+        return `不支持的选股策略：${strategy}\n支持的策略：N型(1)、填坑(2)、少妇(3)、突破(4)、补票(5)、少妇pro(6)`;
       }
         
         try {
