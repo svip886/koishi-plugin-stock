@@ -1,6 +1,6 @@
 {
   "name": "koishi-plugin-stock",
-  "version": "1.0.4",
+  "version": "1.0.7",
   "description": "A Koishi plugin that fetches stock data when user sends '活跃市值' or '异动 [stock code]'",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",

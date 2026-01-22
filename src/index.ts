@@ -1,10 +1,40 @@
 import { Context, Schema } from 'koishi'
 
-export interface Config {}
+export interface Config {
+  blacklistedUsers?: string[]
+  blacklistedChannels?: string[]
+}
 
-export const Config: Schema<Config> = Schema.object({})
+export const Config: Schema<Config> = Schema.object({
+  blacklistedUsers: Schema.array(String).description('黑名单用户ID'),
+  blacklistedChannels: Schema.array(String).description('黑名单频道ID'),
+})
 
-export function apply(ctx: Context) {
+export function apply(ctx: Context, config: Config) {
+  // 检查是否在黑名单中
+  function isBlacklisted(session) {
+    const userId = session.userId
+    const channelId = session.channelId
+    
+    if (config.blacklistedUsers?.includes(userId)) {
+      return true
+    }
+    
+    if (config.blacklistedChannels?.includes(channelId)) {
+      return true
+    }
+    
+    return false
+  }
+  
+  // 注册全局中间件检查黑名单
+  ctx.middleware(async (session, next) => {
+    if (isBlacklisted(session)) {
+      return '您已被加入黑名单，无法使用此功能。'
+    }
+    return next()
+  })
+
   // 监听活跃市值命令
   ctx.command('活跃市值', '获取活跃市值数据')
     .action(async ({ session }) => {
@@ -14,7 +44,7 @@ export function apply(ctx: Context) {
         const responseText = await ctx.http.get('http://stock.svip886.com/api/indexes', { responseType: 'text' })
         
         // 直接返回API返回的数据
-        return `📊 活跃市值数据：\n\n${responseText}`
+        return `📊 指数看板：\n\n${responseText}`
       } catch (error) {
         console.error('获取活跃市值数据失败:', error)
         return '获取活跃市值数据失败，请稍后重试。'
@@ -111,6 +141,7 @@ export function apply(ctx: Context) {
 
   // 使用中间件方式监听特定关键词（作为备用方案）
   ctx.middleware(async (session, next) => {
+    // 黑名单检查已经通过全局中间件处理
     const content = session.content?.trim();
     
     if (content === '活跃市值') {
