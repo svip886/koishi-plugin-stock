@@ -1,0 +1,49 @@
+{
+  "name": "koishi-plugin-stock",
+  "version": "1.0.0",
+  "description": "A Koishi plugin that fetches stock data when user sends '活跃市值' or '异动 [stock code]'",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "exports": {
+    ".": {
+      "require": "./lib/index.js",
+      "import": "./lib/index.js",
+      "types": "./lib/index.d.ts"
+    }
+  },
+  "files": [
+    "lib"
+  ],
+  "keywords": [
+    "koishi",
+    "plugin",
+    "stock",
+    "finance",
+    "market",
+    "data",
+    "api"
+  ],
+  "peerDependencies": {
+    "koishi": "^4.18.10"
+  },
+  "devDependencies": {
+    "@koishijs/scripts": "^4.0.0",
+    "@types/node": "^18.19.130",
+    "typescript": "^5.9.3"
+  },
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/koishi-plugin-stock.git"
+  },
+  "homepage": "https://github.com/username/koishi-plugin-stock",
+  "bugs": {
+    "url": "https://github.com/username/koishi-plugin-stock/issues"
+  }
+}
