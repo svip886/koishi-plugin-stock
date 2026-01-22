@@ -1,10 +1,11 @@
 # 使用说明
 
 ## 插件功能
-`koishi-plugin-stock` 是一个Koishi插件，包含三个主要功能：
+`koishi-plugin-stock` 是一个Koishi插件，包含四个主要功能：
 1. 当用户发送"活跃市值"时，插件会自动从 http://stock.svip886.com/api/indexes 获取股市数据并回复给用户。
 2. 当用户发送"异动 [股票代码]"时，插件会自动从 http://stock.svip886.com/api/analyze?code=[股票代码] 获取指定股票的异动分析数据并回复给用户。
 3. 当用户发送"涨停看板"时，插件会自动下载 http://stock.svip886.com/api/limit_up.png 图片并回复给用户。
+4. 当用户发送"选股 [策略名称]"时，插件会根据指定策略从 http://stock.svip886.com/api/dyq_select/[策略API名] 获取选股结果并回复给用户。
 
 ## 已完成的测试
 - ✅ 插件代码成功编译
