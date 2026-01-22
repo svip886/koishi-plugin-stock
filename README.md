@@ -4,10 +4,10 @@
 
 ## 功能
 
-- 用户发送"活跃市值"命令时，自动从 http://stock.svip886.com/api/indexes 获取数据并格式化显示
-- 用户发送"异动 [股票代码]"命令时，自动从 http://stock.svip886.com/api/analyze?code=[股票代码] 获取指定股票的异动分析数据
-- 用户发送"涨停看板"命令时，自动下载 http://stock.svip886.com/api/limit_up.png 图片并显示
-- 用户发送"选股 [策略名称]"命令时，自动从 http://stock.svip886.com/api/dyq_select/[策略API名] 获取选股结果
+- 用户发送"活跃市值"命令时，自动从 indexes API获取数据并格式化显示
+- 用户发送"异动 [股票代码]"命令时，自动从 analyze API获取指定股票的异动分析数据
+- 用户发送"涨停看板"命令时，自动从 limit_up API下载图片并显示
+- 用户发送"选股 [策略名称]"命令时，自动从 dyq_select API获取选股结果
 - 支持为每个指令单独设置黑名单，可限制特定用户使用特定功能
 - 自动格式化数据显示给用户
 
