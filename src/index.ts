@@ -188,11 +188,21 @@ export function apply(ctx: Context, config: Config) {
       }
       
       try {
-        // 使用Koishi的资源系统来访问本地图片
-        const imagePath = './images/qi.jpeg';
+        // 读取本地图片文件并转换为base64
+        const fs = require('fs').promises;
+        const path = require('path');
         
-        // 返回本地图片
-        return `<img src="${imagePath}" />`;
+        // 构建图片的绝对路径
+        const imagePath = path.resolve(__dirname, '../images/qi.jpeg');
+        
+        // 读取图片文件
+        const imageData = await fs.readFile(imagePath);
+        
+        // 将图片数据转换为base64编码
+        const base64Image = imageData.toString('base64');
+        
+        // 返回base64编码的图片
+        return `<img src="data:image/jpeg;base64,${base64Image}" />`;
       } catch (error) {
         console.error('获取骑图片失败:', error);
         return '获取骑图片失败，请稍后重试。';
@@ -316,11 +326,21 @@ export function apply(ctx: Context, config: Config) {
       }
       
       try {
-        // 使用Koishi的资源系统来访问本地图片
-        const imagePath = './images/qi.jpeg';
+        // 读取本地图片文件并转换为base64
+        const fs = require('fs').promises;
+        const path = require('path');
         
-        // 返回本地图片
-        return `<img src="${imagePath}" />`;
+        // 构建图片的绝对路径
+        const imagePath = path.resolve(__dirname, '../images/qi.jpeg');
+        
+        // 读取图片文件
+        const imageData = await fs.readFile(imagePath);
+        
+        // 将图片数据转换为base64编码
+        const base64Image = imageData.toString('base64');
+        
+        // 返回base64编码的图片
+        return `<img src="data:image/jpeg;base64,${base64Image}" />`;
       } catch (error) {
         console.error('获取骑图片失败:', error);
         return '获取骑图片失败，请稍后重试。';
