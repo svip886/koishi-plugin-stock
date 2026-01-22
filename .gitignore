@@ -4,3 +4,7 @@ lib/
 .nyc_output/
 coverage/
 *.log
+*.tsbuildinfo
+temp/
+.DS_Store
+Thumbs.db
