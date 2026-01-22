@@ -7,6 +7,12 @@ export interface Config {
   stockSelectionBlacklist?: string[]
   rideBlacklist?: string[]
   allCommandsBlacklist?: string[]
+  activeMarketCapChannelBlacklist?: string[]
+  stockAlertChannelBlacklist?: string[]
+  limitUpBoardChannelBlacklist?: string[]
+  stockSelectionChannelBlacklist?: string[]
+  rideChannelBlacklist?: string[]
+  allCommandsChannelBlacklist?: string[]
 }
 
 export const Config: Schema<Config> = Schema.object({
@@ -16,14 +22,21 @@ export const Config: Schema<Config> = Schema.object({
   limitUpBoardBlacklist: Schema.array(String).description('涨停看板指令黑名单用户ID'),
   stockSelectionBlacklist: Schema.array(String).description('选股指令黑名单用户ID'),
   rideBlacklist: Schema.array(String).description('骑指令黑名单用户ID'),
+  allCommandsChannelBlacklist: Schema.array(String).description('全部指令黑名单频道ID'),
+  activeMarketCapChannelBlacklist: Schema.array(String).description('活跃市值指令黑名单频道ID'),
+  stockAlertChannelBlacklist: Schema.array(String).description('异动指令黑名单频道ID'),
+  limitUpBoardChannelBlacklist: Schema.array(String).description('涨停看板指令黑名单频道ID'),
+  stockSelectionChannelBlacklist: Schema.array(String).description('选股指令黑名单频道ID'),
+  rideChannelBlacklist: Schema.array(String).description('骑指令黑名单频道ID'),
 })
 
 export function apply(ctx: Context, config: Config) {
-  // 检查用户是否在特定指令的黑名单中
+  // 检查用户或频道是否在特定指令的黑名单中
   function isUserInSpecificBlacklist(session, commandName: string) {
     const userId = session.userId;
+    const channelId = session.channelId;
     
-    // 检查特定指令黑名单
+    // 检查特定指令的用户黑名单
     switch(commandName) {
       case '活跃市值':
         if (config.activeMarketCapBlacklist?.includes(userId)) {
@@ -52,8 +65,42 @@ export function apply(ctx: Context, config: Config) {
         break;
     }
     
-    // 检查全局黑名单
+    // 检查特定指令的频道黑名单
+    switch(commandName) {
+      case '活跃市值':
+        if (config.activeMarketCapChannelBlacklist?.includes(channelId)) {
+          return true;
+        }
+        break;
+      case '异动':
+        if (config.stockAlertChannelBlacklist?.includes(channelId)) {
+          return true;
+        }
+        break;
+      case '涨停看板':
+        if (config.limitUpBoardChannelBlacklist?.includes(channelId)) {
+          return true;
+        }
+        break;
+      case '选股':
+        if (config.stockSelectionChannelBlacklist?.includes(channelId)) {
+          return true;
+        }
+        break;
+      case '骑':
+        if (config.rideChannelBlacklist?.includes(channelId)) {
+          return true;
+        }
+        break;
+    }
+    
+    // 检查全局用户黑名单
     if (config.allCommandsBlacklist?.includes(userId)) {
+      return true;
+    }
+    
+    // 检查全局频道黑名单
+    if (config.allCommandsChannelBlacklist?.includes(channelId)) {
       return true;
     }
     

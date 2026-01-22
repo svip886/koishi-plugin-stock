@@ -6,6 +6,12 @@ export interface Config {
     stockSelectionBlacklist?: string[];
     rideBlacklist?: string[];
     allCommandsBlacklist?: string[];
+    activeMarketCapChannelBlacklist?: string[];
+    stockAlertChannelBlacklist?: string[];
+    limitUpBoardChannelBlacklist?: string[];
+    stockSelectionChannelBlacklist?: string[];
+    rideChannelBlacklist?: string[];
+    allCommandsChannelBlacklist?: string[];
 }
 export declare const Config: Schema<Config>;
 export declare function apply(ctx: Context, config: Config): void;

@@ -28,6 +28,12 @@ npm install koishi-plugin-stock
 - `limitUpBoardBlacklist`: 涨停看板指令黑名单用户ID数组
 - `stockSelectionBlacklist`: 选股指令黑名单用户ID数组
 - `rideBlacklist`: 骑指令黑名单用户ID数组
+- `allCommandsChannelBlacklist`: 全部指令黑名单频道ID数组
+- `activeMarketCapChannelBlacklist`: 活跃市值指令黑名单频道ID数组
+- `stockAlertChannelBlacklist`: 异动指令黑名单频道ID数组
+- `limitUpBoardChannelBlacklist`: 涨停看板指令黑名单频道ID数组
+- `stockSelectionChannelBlacklist`: 选股指令黑名单频道ID数组
+- `rideChannelBlacklist`: 骑指令黑名单频道ID数组
 
 ## 使用
 
@@ -40,6 +46,9 @@ npm install koishi-plugin-stock
 配置黑名单可在插件设置中进行，将特定用户ID添加到相应指令的黑名单中即可限制其使用权限。
 
 ## 更新日志
+
+### v1.0.11
+- 添加了频道/群聊黑名单功能，支持按频道ID限制指令使用
 
 ### v1.0.10
 - 修复了"骑"指令，使用本地图片路径并返回base64编码的图片
