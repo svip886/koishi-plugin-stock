@@ -40,6 +40,27 @@ export function apply(ctx: Context) {
       }
     })
 
+  // 监听涨停看板命令
+  ctx.command('涨停看板', '获取涨停看板图片')
+    .action(async ({ session }) => {
+      try {
+        // 使用Koishi的HTTP服务下载图片
+        const imageUrl = 'http://stock.svip886.com/api/limit_up.png';
+        
+        // 获取图片的Buffer数据
+        const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
+        
+        // 将Buffer转换为Base64编码
+        const base64Image = Buffer.from(imageBuffer).toString('base64');
+        
+        // 返回图片
+        return `<img src="data:image/png;base64,${base64Image}" />`;
+      } catch (error) {
+        console.error('获取涨停看板图片失败:', error);
+        return '获取涨停看板图片失败，请稍后重试。';
+      }
+    });
+
   // 使用中间件方式监听特定关键词（作为备用方案）
   ctx.middleware(async (session, next) => {
     const content = session.content?.trim();
@@ -71,6 +92,23 @@ export function apply(ctx: Context) {
           console.error('获取股票异动数据失败:', error)
           return `获取股票 ${stockCode} 异动数据失败，请稍后重试。`
         }
+      }
+    } else if (content === '涨停看板') {
+      try {
+        // 使用Koishi的HTTP服务下载图片
+        const imageUrl = 'http://stock.svip886.com/api/limit_up.png';
+        
+        // 获取图片的Buffer数据
+        const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
+        
+        // 将Buffer转换为Base64编码
+        const base64Image = Buffer.from(imageBuffer).toString('base64');
+        
+        // 返回图片
+        return `<img src="data:image/png;base64,${base64Image}" />`;
+      } catch (error) {
+        console.error('获取涨停看板图片失败:', error);
+        return '获取涨停看板图片失败，请稍后重试。';
       }
     }
     
