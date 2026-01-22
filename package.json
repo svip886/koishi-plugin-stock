@@ -14,7 +14,8 @@
       "require": "./lib/index.js",
       "import": "./lib/index.js",
       "types": "./lib/index.d.ts"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "lib"
@@ -36,14 +37,14 @@
     "@types/node": "^18.19.130",
     "typescript": "^5.9.3"
   },
-  "author": "",
+  "author": "Paranoid <administrator@vip886.cn>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/username/koishi-plugin-stock.git"
+    "url": "https://github.com/svip886/koishi-plugin-stock.git"
   },
-  "homepage": "https://github.com/username/koishi-plugin-stock",
+  "homepage": "https://github.com/svip886/koishi-plugin-stock",
   "bugs": {
-    "url": "https://github.com/username/koishi-plugin-stock/issues"
+    "url": "https://github.com/svip886/koishi-plugin-stock/issues"
   }
 }
