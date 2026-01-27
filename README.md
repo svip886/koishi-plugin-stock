@@ -1,14 +1,16 @@
 # koishi-plugin-stock
 
-一个Koishi插件，当用户发送特定命令时自动获取股票数据并显示结果。支持活跃市值、异动分析、涨停看板和选股功能，并提供指令级黑名单配置。
+一个Koishi插件，当用户发送特定命令时自动获取股票数据并显示结果。支持活跃市值、异动分析、涨停看板、跌停看板和选股功能，并提供指令级黑名单配置和定时广播任务。
 
 ## 功能
 
 - 用户发送"活跃市值"命令时，自动从 `indexes`API获取数据并格式化显示
 - 用户发送"异动 [股票代码]"命令时，自动从 `analyze`API获取指定股票的异动分析数据
 - 用户发送"涨停看板"命令时，自动从 `limit_up`API下载图片并显示
+- 用户发送"跌停看板"命令时，自动从 `limit_down`API下载图片并显示
 - 用户发送"选股 [策略名称]"命令时，自动从 `dyq_select` API获取选股结果
 - 用户发送"骑"命令时，自动返回 `images/qi.jpeg` 图片
+- 支持定时广播任务，可自定义时间发送活跃市值、涨停/跌停看板（仅交易日广播）
 - 支持为每个指令单独设置黑名单，可限制特定用户使用特定功能
 - 自动格式化数据显示给用户
 
@@ -26,26 +28,41 @@ npm install koishi-plugin-stock
 - `activeMarketCapBlacklist`: 活跃市值指令黑名单用户ID数组
 - `stockAlertBlacklist`: 异动指令黑名单用户ID数组
 - `limitUpBoardBlacklist`: 涨停看板指令黑名单用户ID数组
+- `limitDownBoardBlacklist`: 跌停看板指令黑名单用户ID数组
 - `stockSelectionBlacklist`: 选股指令黑名单用户ID数组
 - `rideBlacklist`: 骑指令黑名单用户ID数组
 - `allCommandsChannelBlacklist`: 全部指令黑名单频道ID数组
 - `activeMarketCapChannelBlacklist`: 活跃市值指令黑名单频道ID数组
 - `stockAlertChannelBlacklist`: 异动指令黑名单频道ID数组
 - `limitUpBoardChannelBlacklist`: 涨停看板指令黑名单频道ID数组
+- `limitDownBoardChannelBlacklist`: 跌停看板指令黑名单频道ID数组
 - `stockSelectionChannelBlacklist`: 选股指令黑名单频道ID数组
 - `rideChannelBlacklist`: 骑指令黑名单频道ID数组
+- `broadcastTasks`: 定时广播任务列表，每个任务包含：
+  - `time`: 触发时间 (HH:mm)
+  - `type`: 消息类型 (private/channel)
+  - `targetId`: 目标 ID
+  - `content`: 广播内容 (活跃市值/涨停看板/跌停看板)
 
 ## 使用
 
 - 发送"活跃市值"获取最新的市场指数数据
 - 发送"异动 [股票代码]"获取指定股票的异动分析，如"异动 000001"
 - 发送"涨停看板"获取涨停股票看板图片
+- 发送"跌停看板"获取跌停股票看板图片
 - 发送"选股 [策略名称或编号]"获取选股结果，支持的策略：N型(1)、填坑(2)、少妇(3)、突破(4)、补票(5)、少妇pro(6)
 - 发送"骑"获取图片
 
 配置黑名单可在插件设置中进行，将特定用户ID添加到相应指令的黑名单中即可限制其使用权限。
 
 ## 更新日志
+
+### v1.0.13
+- 新增定时广播任务功能，支持自定义时间发送指数和看板数据
+- 自动识别中国交易日（排除周末及法定节假日）
+
+### v1.0.12
+- 添加了"跌停看板"指令，可获取跌停股票看板图片
 
 ### v1.0.11
 - 添加了频道/群聊黑名单功能，支持按频道ID限制指令使用

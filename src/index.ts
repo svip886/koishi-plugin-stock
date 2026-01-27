@@ -1,36 +1,132 @@
 import { Context, Schema } from 'koishi'
 
+export interface BroadcastTask {
+  time: string
+  type: 'private' | 'channel'
+  targetId: string
+  content: '活跃市值' | '涨停看板' | '跌停看板'
+}
+
 export interface Config {
   activeMarketCapBlacklist?: string[]
   stockAlertBlacklist?: string[]
   limitUpBoardBlacklist?: string[]
+  limitDownBoardBlacklist?: string[]
   stockSelectionBlacklist?: string[]
   rideBlacklist?: string[]
   allCommandsBlacklist?: string[]
   activeMarketCapChannelBlacklist?: string[]
   stockAlertChannelBlacklist?: string[]
   limitUpBoardChannelBlacklist?: string[]
+  limitDownBoardChannelBlacklist?: string[]
   stockSelectionChannelBlacklist?: string[]
   rideChannelBlacklist?: string[]
   allCommandsChannelBlacklist?: string[]
+  broadcastTasks?: BroadcastTask[]
 }
+
+const BroadcastTask: Schema<BroadcastTask> = Schema.object({
+  time: Schema.string().description('触发时间 (格式 HH:mm)').pattern(/^([01]\d|2[0-3]):[0-5]\d$/),
+  type: Schema.union([
+    Schema.const('private').description('私人消息'),
+    Schema.const('channel').description('频道消息'),
+  ]).default('channel').description('消息类型'),
+  targetId: Schema.string().description('目标用户或频道 ID'),
+  content: Schema.union([
+    Schema.const('活跃市值'),
+    Schema.const('涨停看板'),
+    Schema.const('跌停看板'),
+  ]).description('广播内容'),
+})
 
 export const Config: Schema<Config> = Schema.object({
   allCommandsBlacklist: Schema.array(String).description('全部指令黑名单用户ID'),
   activeMarketCapBlacklist: Schema.array(String).description('活跃市值指令黑名单用户ID'),
   stockAlertBlacklist: Schema.array(String).description('异动指令黑名单用户ID'),
   limitUpBoardBlacklist: Schema.array(String).description('涨停看板指令黑名单用户ID'),
+  limitDownBoardBlacklist: Schema.array(String).description('跌停看板指令黑名单用户ID'),
   stockSelectionBlacklist: Schema.array(String).description('选股指令黑名单用户ID'),
   rideBlacklist: Schema.array(String).description('骑指令黑名单用户ID'),
   allCommandsChannelBlacklist: Schema.array(String).description('全部指令黑名单频道ID'),
   activeMarketCapChannelBlacklist: Schema.array(String).description('活跃市值指令黑名单频道ID'),
   stockAlertChannelBlacklist: Schema.array(String).description('异动指令黑名单频道ID'),
   limitUpBoardChannelBlacklist: Schema.array(String).description('涨停看板指令黑名单频道ID'),
+  limitDownBoardChannelBlacklist: Schema.array(String).description('跌停看板指令黑名单频道ID'),
   stockSelectionChannelBlacklist: Schema.array(String).description('选股指令黑名单频道ID'),
   rideChannelBlacklist: Schema.array(String).description('骑指令黑名单频道ID'),
+  broadcastTasks: Schema.array(BroadcastTask).description('定时广播任务列表'),
 })
 
 export function apply(ctx: Context, config: Config) {
+  // 定时任务逻辑
+  let lastCheckedMinute = '';
+
+  ctx.setInterval(async () => {
+    const now = new Date();
+    const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    
+    if (currentTime === lastCheckedMinute) return;
+    
+    if (!config.broadcastTasks || config.broadcastTasks.length === 0) return;
+
+    // 检查当前时间是否有任务
+    const activeTasks = config.broadcastTasks.filter(t => t.time === currentTime);
+    if (activeTasks.length === 0) return;
+
+    lastCheckedMinute = currentTime;
+
+    try {
+      // 检查是否为交易日（基本周末检查 + 节假日API）
+      const day = now.getDay();
+      const isWeekend = (day === 0 || day === 6);
+      const dateStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+      
+      let tradingDay = !isWeekend;
+      try {
+        const holidayData = await ctx.http.get(`https://timor.tech/api/holiday/info/${dateStr}`);
+        if (holidayData && holidayData.type) {
+          // type: 0 工作日, 1 周末, 2 节日, 3 调休
+          tradingDay = (holidayData.type.type === 0 || holidayData.type.type === 3);
+        }
+      } catch (e) {
+        // API 失败，使用基本周末检查
+      }
+
+      if (!tradingDay) return;
+
+      for (const task of activeTasks) {
+        try {
+          let message = '';
+          if (task.content === '活跃市值') {
+            const responseText = await ctx.http.get('http://stock.svip886.com/api/indexes', { responseType: 'text' });
+            message = `📊 定时广播 - 指数看板：\n\n${responseText}`;
+          } else if (task.content === '涨停看板' || task.content === '跌停看板') {
+            const apiType = task.content === '涨停看板' ? 'limit_up' : 'limit_down';
+            const imageUrl = `http://stock.svip886.com/api/${apiType}.png`;
+            const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
+            const base64Image = Buffer.from(imageBuffer).toString('base64');
+            message = `🔔 定时广播 - ${task.content}：\n<img src="data:image/png;base64,${base64Image}" />`;
+          }
+
+          if (message) {
+            const bot = ctx.bots.find(b => (b.status as any) === 'online' || (b.status as any) === 1) || ctx.bots[0];
+            if (bot) {
+              if (task.type === 'private') {
+                await bot.sendPrivateMessage(task.targetId, message);
+              } else {
+                await bot.sendMessage(task.targetId, message);
+              }
+            }
+          }
+        } catch (error) {
+          ctx.logger('stock').error(`定时广播任务执行失败: ${task.content} to ${task.targetId}`, error);
+        }
+      }
+    } catch (error) {
+      ctx.logger('stock').error('定时广播逻辑执行出错', error);
+    }
+  }, 30000);
+
   // 检查用户或频道是否在特定指令的黑名单中
   function isUserInSpecificBlacklist(session, commandName: string) {
     const userId = session.userId;
@@ -50,6 +146,11 @@ export function apply(ctx: Context, config: Config) {
         break;
       case '涨停看板':
         if (config.limitUpBoardBlacklist?.includes(userId)) {
+          return true;
+        }
+        break;
+      case '跌停看板':
+        if (config.limitDownBoardBlacklist?.includes(userId)) {
           return true;
         }
         break;
@@ -79,6 +180,11 @@ export function apply(ctx: Context, config: Config) {
         break;
       case '涨停看板':
         if (config.limitUpBoardChannelBlacklist?.includes(channelId)) {
+          return true;
+        }
+        break;
+      case '跌停看板':
+        if (config.limitDownBoardChannelBlacklist?.includes(channelId)) {
           return true;
         }
         break;
@@ -172,6 +278,31 @@ export function apply(ctx: Context, config: Config) {
       } catch (error) {
         console.error('获取涨停看板图片失败:', error);
         return '获取涨停看板图片失败，请稍后重试。';
+      }
+    });
+
+  // 监听跌停看板命令
+  ctx.command('跌停看板', '获取跌停看板图片')
+    .action(async ({ session }) => {
+      if (isUserInSpecificBlacklist(session, '跌停看板')) {
+        return '您已被加入黑名单，无法使用此功能。';
+      }
+      
+      try {
+        // 使用Koishi的HTTP服务下载图片
+        const imageUrl = 'http://stock.svip886.com/api/limit_down.png';
+        
+        // 获取图片的Buffer数据
+        const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
+        
+        // 将Buffer转换为Base64编码
+        const base64Image = Buffer.from(imageBuffer).toString('base64');
+        
+        // 返回图片
+        return `<img src="data:image/png;base64,${base64Image}" />`;
+      } catch (error) {
+        console.error('获取跌停看板图片失败:', error);
+        return '获取跌停看板图片失败，请稍后重试。';
       }
     });
 
@@ -316,6 +447,27 @@ export function apply(ctx: Context, config: Config) {
       } catch (error) {
         console.error('获取涨停看板图片失败:', error);
         return '获取涨停看板图片失败，请稍后重试。';
+      }
+    } else if (content === '跌停看板') {
+      if (isUserInSpecificBlacklist(session, '跌停看板')) {
+        return '您已被加入黑名单，无法使用此功能。';
+      }
+      
+      try {
+        // 使用Koishi的HTTP服务下载图片
+        const imageUrl = 'http://stock.svip886.com/api/limit_down.png';
+        
+        // 获取图片的Buffer数据
+        const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
+        
+        // 将Buffer转换为Base64编码
+        const base64Image = Buffer.from(imageBuffer).toString('base64');
+        
+        // 返回图片
+        return `<img src="data:image/png;base64,${base64Image}" />`;
+      } catch (error) {
+        console.error('获取跌停看板图片失败:', error);
+        return '获取跌停看板图片失败，请稍后重试。';
       }
     } else if (content?.startsWith('选股 ')) {
       if (isUserInSpecificBlacklist(session, '选股')) {
