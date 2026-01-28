@@ -1,6 +1,6 @@
 {
   "name": "koishi-plugin-stock",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "A Koishi plugin that fetches stock data and provides market analysis, including active market cap, stock alerts, limit-up board, and stock selection features with configurable blacklists for each command.",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",

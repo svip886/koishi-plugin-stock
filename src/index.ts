@@ -41,22 +41,29 @@ const BroadcastTask: Schema<BroadcastTask> = Schema.object({
 })
 
 export const Config: Schema<Config> = Schema.object({
+  // --- 系统设置 ---
   enableDebugLog: Schema.boolean().description('启用调试日志').default(false),
-  allCommandsBlacklist: Schema.array(String).description('全部指令黑名单用户ID').role('collapse:userBlacklist'),
-  activeMarketCapBlacklist: Schema.array(String).description('活跃市值指令黑名单用户ID').role('collapse:userBlacklist'),
-  stockAlertBlacklist: Schema.array(String).description('异动指令黑名单用户ID').role('collapse:userBlacklist'),
-  limitUpBoardBlacklist: Schema.array(String).description('涨停看板指令黑名单用户ID').role('collapse:userBlacklist'),
-  limitDownBoardBlacklist: Schema.array(String).description('跌停看板指令黑名单用户ID').role('collapse:userBlacklist'),
-  stockSelectionBlacklist: Schema.array(String).description('选股指令黑名单用户ID').role('collapse:userBlacklist'),
-  rideBlacklist: Schema.array(String).description('骑指令黑名单用户ID').role('collapse:userBlacklist'),
-  allCommandsChannelBlacklist: Schema.array(String).description('全部指令黑名单频道ID').role('collapse:channelBlacklist'),
-  activeMarketCapChannelBlacklist: Schema.array(String).description('活跃市值指令黑名单频道ID').role('collapse:channelBlacklist'),
-  stockAlertChannelBlacklist: Schema.array(String).description('异动指令黑名单频道ID').role('collapse:channelBlacklist'),
-  limitUpBoardChannelBlacklist: Schema.array(String).description('涨停看板指令黑名单频道ID').role('collapse:channelBlacklist'),
-  limitDownBoardChannelBlacklist: Schema.array(String).description('跌停看板指令黑名单频道ID').role('collapse:channelBlacklist'),
-  stockSelectionChannelBlacklist: Schema.array(String).description('选股指令黑名单频道ID').role('collapse:channelBlacklist'),
-  rideChannelBlacklist: Schema.array(String).description('骑指令黑名单频道ID').role('collapse:channelBlacklist'),
-  broadcastTasks: Schema.array(BroadcastTask).description('定时广播任务列表').role('collapse:broadcast'),
+  
+  // --- 用户黑名单 ---
+  allCommandsBlacklist: Schema.array(String).description('全部指令黑名单用户ID'),
+  activeMarketCapBlacklist: Schema.array(String).description('活跃市值指令黑名单用户ID'),
+  stockAlertBlacklist: Schema.array(String).description('异动指令黑名单用户ID'),
+  limitUpBoardBlacklist: Schema.array(String).description('涨停看板指令黑名单用户ID'),
+  limitDownBoardBlacklist: Schema.array(String).description('跌停看板指令黑名单用户ID'),
+  stockSelectionBlacklist: Schema.array(String).description('选股指令黑名单用户ID'),
+  rideBlacklist: Schema.array(String).description('骑指令黑名单用户ID'),
+  
+  // --- 频道黑名单 ---
+  allCommandsChannelBlacklist: Schema.array(String).description('全部指令黑名单频道ID'),
+  activeMarketCapChannelBlacklist: Schema.array(String).description('活跃市值指令黑名单频道ID'),
+  stockAlertChannelBlacklist: Schema.array(String).description('异动指令黑名单频道ID'),
+  limitUpBoardChannelBlacklist: Schema.array(String).description('涨停看板指令黑名单频道ID'),
+  limitDownBoardChannelBlacklist: Schema.array(String).description('跌停看板指令黑名单频道ID'),
+  stockSelectionChannelBlacklist: Schema.array(String).description('选股指令黑名单频道ID'),
+  rideChannelBlacklist: Schema.array(String).description('骑指令黑名单频道ID'),
+  
+  // --- 定时广播 ---
+  broadcastTasks: Schema.array(BroadcastTask).description('定时广播任务列表'),
 })
 
 export function apply(ctx: Context, config: Config) {
