@@ -1,9 +1,9 @@
 import { Context, Schema } from 'koishi'
 
 export interface BroadcastTask {
-  time: string
+  times: string
   type: 'private' | 'channel'
-  targetId: string
+  targetIds: string
   content: '活跃市值' | '涨停看板' | '跌停看板'
 }
 
@@ -26,12 +26,12 @@ export interface Config {
 }
 
 const BroadcastTask: Schema<BroadcastTask> = Schema.object({
-  time: Schema.string().description('触发时间 (格式 HH:mm)').pattern(/^([01]\d|2[0-3]):[0-5]\d$/),
+  times: Schema.string().description('触发时间 (事列列表, 推荐格式: HH:mm,HH:mm)').default('09:30'),
   type: Schema.union([
     Schema.const('private').description('私人消息'),
     Schema.const('channel').description('频道消息'),
   ]).default('channel').description('消息类型'),
-  targetId: Schema.string().description('目标用户或频道 ID'),
+  targetIds: Schema.string().description('目标ID列表 (事列列表, 需要用逗号隔开)').default(''),
   content: Schema.union([
     Schema.const('活跃市值'),
     Schema.const('涨停看板'),
@@ -58,6 +58,7 @@ export const Config: Schema<Config> = Schema.object({
 })
 
 export function apply(ctx: Context, config: Config) {
+  const logger = ctx.logger('stock');
   // 定时任务逻辑
   let lastCheckedMinute = '';
 
@@ -70,10 +71,14 @@ export function apply(ctx: Context, config: Config) {
     if (!config.broadcastTasks || config.broadcastTasks.length === 0) return;
 
     // 检查当前时间是否有任务
-    const activeTasks = config.broadcastTasks.filter(t => t.time === currentTime);
+    const activeTasks = config.broadcastTasks.filter(t => {
+      const times = t.times.split(',').map(s => s.trim());
+      return times.includes(currentTime);
+    });
     if (activeTasks.length === 0) return;
 
     lastCheckedMinute = currentTime;
+    logger.info(`检测到定时任务: ${currentTime}, 共有 ${activeTasks.length} 个待执行任务`);
 
     try {
       // 检查是否为交易日（基本周末检查 + 节假日API）
@@ -83,19 +88,32 @@ export function apply(ctx: Context, config: Config) {
       
       let tradingDay = !isWeekend;
       try {
+        logger.debug(`正在检查交易日状态: ${dateStr}`);
         const holidayData = await ctx.http.get(`https://timor.tech/api/holiday/info/${dateStr}`);
         if (holidayData && holidayData.type) {
           // type: 0 工作日, 1 周末, 2 节日, 3 调休
-          tradingDay = (holidayData.type.type === 0 || holidayData.type.type === 3);
+          const typeCode = holidayData.type.type;
+          tradingDay = (typeCode === 0 || typeCode === 3);
+          logger.debug(`节假日API返回类型: ${typeCode} (${holidayData.type.name}), 交易日状态: ${tradingDay}`);
         }
       } catch (e) {
-        // API 失败，使用基本周末检查
+        logger.warn(`节假日API请求失败，将使用基础周末检查: ${e.message}`);
       }
 
-      if (!tradingDay) return;
+      if (!tradingDay) {
+        logger.info(`当前非交易日，跳过广播任务`);
+        return;
+      }
 
       for (const task of activeTasks) {
         try {
+          const targetIds = task.targetIds.split(',').map(id => id.trim()).filter(id => id);
+          if (targetIds.length === 0) {
+            logger.warn(`任务斗不有有效目标ID: ${task.content}`);
+            continue;
+          }
+
+          logger.info(`正在执行广播任务: ${task.content} -> ${targetIds.join(',')} (${task.type})`);
           let message = '';
           if (task.content === '活跃市值') {
             const responseText = await ctx.http.get('http://stock.svip886.com/api/indexes', { responseType: 'text' });
@@ -111,19 +129,28 @@ export function apply(ctx: Context, config: Config) {
           if (message) {
             const bot = ctx.bots.find(b => (b.status as any) === 'online' || (b.status as any) === 1) || ctx.bots[0];
             if (bot) {
-              if (task.type === 'private') {
-                await bot.sendPrivateMessage(task.targetId, message);
-              } else {
-                await bot.sendMessage(task.targetId, message);
+              for (const targetId of targetIds) {
+                try {
+                  if (task.type === 'private') {
+                    await bot.sendPrivateMessage(targetId, message);
+                  } else {
+                    await bot.sendMessage(targetId, message);
+                  }
+                  logger.info(`广播任务发送成功: ${task.content} -> ${targetId}`);
+                } catch (err) {
+                  logger.error(`广播任务发送失败 (${targetId}): ${task.content}`, err);
+                }
               }
+            } else {
+              logger.error(`广播任务发送失败: 未找到可用的机器人实例`);
             }
           }
         } catch (error) {
-          ctx.logger('stock').error(`定时广播任务执行失败: ${task.content} to ${task.targetId}`, error);
+          logger.error(`定时广播任务执行失败: ${task.content}`, error);
         }
       }
     } catch (error) {
-      ctx.logger('stock').error('定时广播逻辑执行出错', error);
+      logger.error('定时广播逻辑执行出错', error);
     }
   }, 30000);
 

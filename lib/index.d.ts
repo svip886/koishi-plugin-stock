@@ -1,8 +1,8 @@
 import { Context, Schema } from 'koishi';
 export interface BroadcastTask {
-    time: string;
+    times: string;
     type: 'private' | 'channel';
-    targetId: string;
+    targetIds: string;
     content: '活跃市值' | '涨停看板' | '跌停看板';
 }
 export interface Config {

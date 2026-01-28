@@ -39,9 +39,9 @@ npm install koishi-plugin-stock
 - `stockSelectionChannelBlacklist`: 选股指令黑名单频道ID数组
 - `rideChannelBlacklist`: 骑指令黑名单频道ID数组
 - `broadcastTasks`: 定时广播任务列表，每个任务包含：
-  - `time`: 触发时间 (HH:mm)
+  - `times`: 触发时间 (逗号分隔的事列，如 `09:30,15:00`)
   - `type`: 消息类型 (private/channel)
-  - `targetId`: 目标 ID
+  - `targetIds`: 目标 ID 列表 (逗号分隔的事列)
   - `content`: 广播内容 (活跃市值/涨停看板/跌停看板)
 
 ## 使用
@@ -56,6 +56,11 @@ npm install koishi-plugin-stock
 配置黑名单可在插件设置中进行，将特定用户ID添加到相应指令的黑名单中即可限制其使用权限。
 
 ## 更新日志
+
+### v1.0.14
+- 改进定时广播配置，支持一个任务配置多个触发时间
+- 支持指定多个目标 ID，支持一次广播给多个用户/群组
+- 优化了广播发送逻辑，增强了错误处理能力
 
 ### v1.0.13
 - 新增定时广播任务功能，支持自定义时间发送指数和看板数据
