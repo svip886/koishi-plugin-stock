@@ -9,30 +9,30 @@ export interface BroadcastTask {
 
 export interface Config {
   enableDebugLog?: boolean
+  allCommandsBlacklist?: string[]
   activeMarketCapBlacklist?: string[]
   stockAlertBlacklist?: string[]
   limitUpBoardBlacklist?: string[]
   limitDownBoardBlacklist?: string[]
   stockSelectionBlacklist?: string[]
   rideBlacklist?: string[]
-  allCommandsBlacklist?: string[]
+  allCommandsChannelBlacklist?: string[]
   activeMarketCapChannelBlacklist?: string[]
   stockAlertChannelBlacklist?: string[]
   limitUpBoardChannelBlacklist?: string[]
   limitDownBoardChannelBlacklist?: string[]
   stockSelectionChannelBlacklist?: string[]
   rideChannelBlacklist?: string[]
-  allCommandsChannelBlacklist?: string[]
   broadcastTasks?: BroadcastTask[]
 }
 
 const BroadcastTask: Schema<BroadcastTask> = Schema.object({
-  times: Schema.string().description('触发时间 (事列列表, 推荐格式: HH:mm,HH:mm)').default('09:30'),
+  times: Schema.string().description('触发时间 (逗号分隔的列表, 推荐格式: HH:mm,HH:mm)').default('09:30'),
   type: Schema.union([
     Schema.const('private').description('私人消息'),
     Schema.const('channel').description('频道消息'),
   ]).default('channel').description('消息类型'),
-  targetIds: Schema.string().description('目标ID列表 (事列列表, 需要用逗号隔开)').default(''),
+  targetIds: Schema.string().description('目标ID列表 (逗号分隔的列表)').default(''),
   content: Schema.union([
     Schema.const('活跃市值'),
     Schema.const('涨停看板'),
@@ -42,21 +42,21 @@ const BroadcastTask: Schema<BroadcastTask> = Schema.object({
 
 export const Config: Schema<Config> = Schema.object({
   enableDebugLog: Schema.boolean().description('启用调试日志').default(false),
-  allCommandsBlacklist: Schema.array(String).description('全部指令黑名单用户ID'),
-  activeMarketCapBlacklist: Schema.array(String).description('活跃市值指令黑名单用户ID'),
-  stockAlertBlacklist: Schema.array(String).description('异动指令黑名单用户ID'),
-  limitUpBoardBlacklist: Schema.array(String).description('涨停看板指令黑名单用户ID'),
-  limitDownBoardBlacklist: Schema.array(String).description('跌停看板指令黑名单用户ID'),
-  stockSelectionBlacklist: Schema.array(String).description('选股指令黑名单用户ID'),
-  rideBlacklist: Schema.array(String).description('骑指令黑名单用户ID'),
-  allCommandsChannelBlacklist: Schema.array(String).description('全部指令黑名单频道ID'),
-  activeMarketCapChannelBlacklist: Schema.array(String).description('活跃市值指令黑名单频道ID'),
-  stockAlertChannelBlacklist: Schema.array(String).description('异动指令黑名单频道ID'),
-  limitUpBoardChannelBlacklist: Schema.array(String).description('涨停看板指令黑名单频道ID'),
-  limitDownBoardChannelBlacklist: Schema.array(String).description('跌停看板指令黑名单频道ID'),
-  stockSelectionChannelBlacklist: Schema.array(String).description('选股指令黑名单频道ID'),
-  rideChannelBlacklist: Schema.array(String).description('骑指令黑名单频道ID'),
-  broadcastTasks: Schema.array(BroadcastTask).description('定时广播任务列表'),
+  allCommandsBlacklist: Schema.array(String).description('用户黑名单 - 全部指令黑名单用户ID'),
+  activeMarketCapBlacklist: Schema.array(String).description('用户黑名单 - 活跃市值指令黑名单用户ID'),
+  stockAlertBlacklist: Schema.array(String).description('用户黑名单 - 异动指令黑名单用户ID'),
+  limitUpBoardBlacklist: Schema.array(String).description('用户黑名单 - 涨停看板指令黑名单用户ID'),
+  limitDownBoardBlacklist: Schema.array(String).description('用户黑名单 - 跌停看板指令黑名单用户ID'),
+  stockSelectionBlacklist: Schema.array(String).description('用户黑名单 - 选股指令黑名单用户ID'),
+  rideBlacklist: Schema.array(String).description('用户黑名单 - 骑指令黑名单用户ID'),
+  allCommandsChannelBlacklist: Schema.array(String).description('频道黑名单 - 全部指令黑名单频道ID'),
+  activeMarketCapChannelBlacklist: Schema.array(String).description('频道黑名单 - 活跃市值指令黑名单频道ID'),
+  stockAlertChannelBlacklist: Schema.array(String).description('频道黑名单 - 异动指令黑名单频道ID'),
+  limitUpBoardChannelBlacklist: Schema.array(String).description('频道黑名单 - 涨停看板指令黑名单频道ID'),
+  limitDownBoardChannelBlacklist: Schema.array(String).description('频道黑名单 - 跌停看板指令黑名单频道ID'),
+  stockSelectionChannelBlacklist: Schema.array(String).description('频道黑名单 - 选股指令黑名单频道ID'),
+  rideChannelBlacklist: Schema.array(String).description('频道黑名单 - 骑指令黑名单频道ID'),
+  broadcastTasks: Schema.array(BroadcastTask).description('定时广播 - 定时广播任务列表'),
 })
 
 export function apply(ctx: Context, config: Config) {

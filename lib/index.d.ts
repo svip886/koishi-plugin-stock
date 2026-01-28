@@ -7,20 +7,20 @@ export interface BroadcastTask {
 }
 export interface Config {
     enableDebugLog?: boolean;
+    allCommandsBlacklist?: string[];
     activeMarketCapBlacklist?: string[];
     stockAlertBlacklist?: string[];
     limitUpBoardBlacklist?: string[];
     limitDownBoardBlacklist?: string[];
     stockSelectionBlacklist?: string[];
     rideBlacklist?: string[];
-    allCommandsBlacklist?: string[];
+    allCommandsChannelBlacklist?: string[];
     activeMarketCapChannelBlacklist?: string[];
     stockAlertChannelBlacklist?: string[];
     limitUpBoardChannelBlacklist?: string[];
     limitDownBoardChannelBlacklist?: string[];
     stockSelectionChannelBlacklist?: string[];
     rideChannelBlacklist?: string[];
-    allCommandsChannelBlacklist?: string[];
     broadcastTasks?: BroadcastTask[];
 }
 export declare const Config: Schema<Config>;
