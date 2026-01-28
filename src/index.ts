@@ -74,11 +74,15 @@ export function apply(ctx: Context, config: Config) {
 
   ctx.setInterval(async () => {
     const now = new Date();
-    const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+    // 使用本地时间而不是utc时间
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const currentTime = `${hours}:${minutes}`;
+    const debugInfo = `now=${now.toString()}, hours=${now.getHours()}, minutes=${now.getMinutes()}, currentTime=${currentTime}`;
     
     // 每分钟的第一次执行时打印当前时间
     if (currentTime !== lastCheckedMinute) {
-      logger.info(`[定时任务检查] 当前时间: ${currentTime}`);
+      logger.info(`[定时任务检查] 当前时间: ${currentTime} | 调试: ${debugInfo}`);
     }
     
     if (currentTime === lastCheckedMinute) return;
