@@ -74,15 +74,15 @@ export function apply(ctx: Context, config: Config) {
 
   ctx.setInterval(async () => {
     const now = new Date();
-    // 使用本地时间而不是utc时间
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
+    // 手动调整时区：UTC+8（中国时间）
+    const localTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+    const hours = localTime.getUTCHours().toString().padStart(2, '0');
+    const minutes = localTime.getUTCMinutes().toString().padStart(2, '0');
     const currentTime = `${hours}:${minutes}`;
-    const debugInfo = `now=${now.toString()}, hours=${now.getHours()}, minutes=${now.getMinutes()}, currentTime=${currentTime}`;
     
     // 每分钟的第一次执行时打印当前时间
     if (currentTime !== lastCheckedMinute) {
-      logger.info(`[定时任务检查] 当前时间: ${currentTime} | 调试: ${debugInfo}`);
+      logger.info(`[定时任务检查] 当前时间: ${currentTime}`);
     }
     
     if (currentTime === lastCheckedMinute) return;
@@ -109,9 +109,12 @@ export function apply(ctx: Context, config: Config) {
 
     try {
       // 检查是否为交易日（基本周末检查 + 节假日API）
-      const day = now.getDay();
+      const day = localTime.getUTCDay();
       const isWeekend = (day === 0 || day === 6);
-      const dateStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+      const year = localTime.getUTCFullYear();
+      const month = (localTime.getUTCMonth() + 1).toString().padStart(2, '0');
+      const date = localTime.getUTCDate().toString().padStart(2, '0');
+      const dateStr = `${year}-${month}-${date}`;
       
       let tradingDay = !isWeekend;
       try {
@@ -121,7 +124,7 @@ export function apply(ctx: Context, config: Config) {
           // type: 0 工作日, 1 周末, 2 节日, 3 调休
           const typeCode = holidayData.type.type;
           tradingDay = (typeCode === 0 || typeCode === 3);
-          logger.debug(`节假日API返回类型: ${typeCode} (${holidayData.type.name}), 交易日状态: ${tradingDay}`);
+          logger.info(`节假日API返回类型: ${typeCode} (${holidayData.type.name}), 交易日状态: ${tradingDay}`);
         }
       } catch (e) {
         logger.warn(`节假日API请求失败，将使用基础周末检查: ${e.message}`);
