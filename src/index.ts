@@ -36,7 +36,7 @@ const BroadcastTask: Schema<BroadcastTask> = Schema.object({
     Schema.const('活跃市值'),
     Schema.const('涨停看板'),
     Schema.const('跌停看板'),
-  ]).description('广播内容'),
+  ]).default('活跃市值').description('广播内容'),
 })
 
 export const Config: Schema<Config> = Schema.object({
