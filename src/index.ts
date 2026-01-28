@@ -78,7 +78,7 @@ export function apply(ctx: Context, config: Config) {
     
     // 每分钟的第一次执行时打印当前时间
     if (currentTime !== lastCheckedMinute) {
-      logger.debug(`定时任务正在运行... 当前时间: ${currentTime}`);
+      logger.info(`[定时任务检查] 当前时间: ${currentTime}`);
     }
     
     if (currentTime === lastCheckedMinute) return;
@@ -94,14 +94,14 @@ export function apply(ctx: Context, config: Config) {
       const times = t.times.split(',').map(s => s.trim()).filter(s => s);
       const isMatch = times.includes(currentTime);
       if (isMatch) {
-        logger.debug(`时间匹配: ${currentTime} 在列表 [${times.join(',')}] 中`);
+        logger.info(`[时间匹配] ${currentTime} 在列表 [${times.join(',')}] 中`);
       }
       return isMatch;
     });
     if (activeTasks.length === 0) return;
 
     lastCheckedMinute = currentTime;
-    logger.info(`检测到定时任务: ${currentTime}, 共有 ${activeTasks.length} 个待执行任务`);
+    logger.info(`[任务触发] 检测到定时任务: ${currentTime}, 共有 ${activeTasks.length} 个待执行任务`);
 
     try {
       // 检查是否为交易日（基本周末检查 + 节假日API）
@@ -205,7 +205,7 @@ export function apply(ctx: Context, config: Config) {
     } catch (error) {
       logger.error('定时广播逻辑执行出错', error);
     }
-  }, 30000);
+  }, 1000);
 
   // 检查用户或频道是否在特定指令的黑名单中
   function isUserInSpecificBlacklist(session, commandName: string) {
