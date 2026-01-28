@@ -72,8 +72,16 @@ export function apply(ctx: Context, config: Config) {
 
     // 检查当前时间是否有任务
     const activeTasks = config.broadcastTasks.filter(t => {
-      const times = t.times.split(',').map(s => s.trim());
-      return times.includes(currentTime);
+      if (!t.times || typeof t.times !== 'string') {
+        logger.warn(`跳过配置不正确的任务: times 字段无效`);
+        return false;
+      }
+      const times = t.times.split(',').map(s => s.trim()).filter(s => s);
+      const isMatch = times.includes(currentTime);
+      if (isMatch) {
+        logger.debug(`时间匹配: ${currentTime} 在列表 [${times.join(',')}] 中`);
+      }
+      return isMatch;
     });
     if (activeTasks.length === 0) return;
 
@@ -107,42 +115,66 @@ export function apply(ctx: Context, config: Config) {
 
       for (const task of activeTasks) {
         try {
+          // 验证配置完整性
+          if (!task.targetIds || typeof task.targetIds !== 'string') {
+            logger.warn(`任务配置不完整: targetIds 字段无效或为空, 内容: ${task.content}`);
+            continue;
+          }
+
           const targetIds = task.targetIds.split(',').map(id => id.trim()).filter(id => id);
           if (targetIds.length === 0) {
-            logger.warn(`任务斗不有有效目标ID: ${task.content}`);
+            logger.warn(`任务目标列表为空: ${task.content}，原始值: ${task.targetIds}`);
             continue;
           }
 
           logger.info(`正在执行广播任务: ${task.content} -> ${targetIds.join(',')} (${task.type})`);
           let message = '';
           if (task.content === '活跃市值') {
-            const responseText = await ctx.http.get('http://stock.svip886.com/api/indexes', { responseType: 'text' });
-            message = `📊 定时广播 - 指数看板：\n\n${responseText}`;
+            try {
+              const responseText = await ctx.http.get('http://stock.svip886.com/api/indexes', { responseType: 'text' });
+              message = `📊 定时广播 - 指数看板：\n\n${responseText}`;
+            } catch (apiErr) {
+              logger.error('获取活跃市值 API 失败', apiErr);
+              continue;
+            }
           } else if (task.content === '涨停看板' || task.content === '跌停看板') {
-            const apiType = task.content === '涨停看板' ? 'limit_up' : 'limit_down';
-            const imageUrl = `http://stock.svip886.com/api/${apiType}.png`;
-            const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
-            const base64Image = Buffer.from(imageBuffer).toString('base64');
-            message = `🔔 定时广播 - ${task.content}：\n<img src="data:image/png;base64,${base64Image}" />`;
+            try {
+              const apiType = task.content === '涨停看板' ? 'limit_up' : 'limit_down';
+              const imageUrl = `http://stock.svip886.com/api/${apiType}.png`;
+              const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
+              const base64Image = Buffer.from(imageBuffer).toString('base64');
+              message = `🔔 定时广播 - ${task.content}：\n<img src="data:image/png;base64,${base64Image}" />`;
+            } catch (apiErr) {
+              logger.error(`获取${task.content}图片 API 失败`, apiErr);
+              continue;
+            }
+          } else {
+            logger.warn(`不支持的广播内容类型: ${task.content}`);
+            continue;
           }
 
-          if (message) {
-            const bot = ctx.bots.find(b => (b.status as any) === 'online' || (b.status as any) === 1) || ctx.bots[0];
-            if (bot) {
-              for (const targetId of targetIds) {
-                try {
-                  if (task.type === 'private') {
-                    await bot.sendPrivateMessage(targetId, message);
-                  } else {
-                    await bot.sendMessage(targetId, message);
-                  }
-                  logger.info(`广播任务发送成功: ${task.content} -> ${targetId}`);
-                } catch (err) {
-                  logger.error(`广播任务发送失败 (${targetId}): ${task.content}`, err);
-                }
+          if (!message) {
+            logger.warn(`未能生成消息内容: ${task.content}`);
+            continue;
+          }
+
+          const bot = ctx.bots.find(b => (b.status as any) === 'online' || (b.status as any) === 1) || ctx.bots[0];
+          if (!bot) {
+            logger.error(`无可用机器人实例，任务中止`);
+            continue;
+          }
+
+          logger.debug(`找到机器人实例，开始向 ${targetIds.length} 个目标发送消息`);
+          for (const targetId of targetIds) {
+            try {
+              if (task.type === 'private') {
+                await bot.sendPrivateMessage(targetId, message);
+              } else {
+                await bot.sendMessage(targetId, message);
               }
-            } else {
-              logger.error(`广播任务发送失败: 未找到可用的机器人实例`);
+              logger.info(`广播任务发送成功: ${task.content} -> ${targetId}`);
+            } catch (err) {
+              logger.error(`广播任务发送失败 (${targetId}): ${task.content}`, err);
             }
           }
         } catch (error) {
