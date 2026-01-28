@@ -6,6 +6,7 @@ export interface BroadcastTask {
     content: '活跃市值' | '涨停看板' | '跌停看板';
 }
 export interface Config {
+    enableDebugLog?: boolean;
     activeMarketCapBlacklist?: string[];
     stockAlertBlacklist?: string[];
     limitUpBoardBlacklist?: string[];

@@ -8,6 +8,7 @@ export interface BroadcastTask {
 }
 
 export interface Config {
+  enableDebugLog?: boolean
   activeMarketCapBlacklist?: string[]
   stockAlertBlacklist?: string[]
   limitUpBoardBlacklist?: string[]
@@ -40,6 +41,7 @@ const BroadcastTask: Schema<BroadcastTask> = Schema.object({
 })
 
 export const Config: Schema<Config> = Schema.object({
+  enableDebugLog: Schema.boolean().description('启用调试日志').default(false),
   allCommandsBlacklist: Schema.array(String).description('全部指令黑名单用户ID'),
   activeMarketCapBlacklist: Schema.array(String).description('活跃市值指令黑名单用户ID'),
   stockAlertBlacklist: Schema.array(String).description('异动指令黑名单用户ID'),
@@ -81,7 +83,7 @@ export function apply(ctx: Context, config: Config) {
     const currentTime = `${hours}:${minutes}`;
     
     // 每分钟的第一次执行时打印当前时间
-    if (currentTime !== lastCheckedMinute) {
+    if (config.enableDebugLog && currentTime !== lastCheckedMinute) {
       logger.info(`[定时任务检查] 当前时间: ${currentTime}`);
     }
     
@@ -97,7 +99,7 @@ export function apply(ctx: Context, config: Config) {
       }
       const times = t.times.split(',').map(s => s.trim()).filter(s => s);
       const isMatch = times.includes(currentTime);
-      if (isMatch) {
+      if (config.enableDebugLog && isMatch) {
         logger.info(`[时间匹配] ${currentTime} 在列表 [${times.join(',')}] 中`);
       }
       return isMatch;
@@ -105,7 +107,9 @@ export function apply(ctx: Context, config: Config) {
     if (activeTasks.length === 0) return;
 
     lastCheckedMinute = currentTime;
-    logger.info(`[任务触发] 检测到定时任务: ${currentTime}, 共有 ${activeTasks.length} 个待执行任务`);
+    if (config.enableDebugLog) {
+      logger.info(`[任务触发] 检测到定时任务: ${currentTime}, 共有 ${activeTasks.length} 个待执行任务`);
+    }
 
     try {
       // 检查是否为交易日（基本周末检查 + 节假日API）
