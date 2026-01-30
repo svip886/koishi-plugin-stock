@@ -83,15 +83,19 @@ export function apply(ctx: Context, config: Config) {
 
   ctx.setInterval(async () => {
     const now = new Date();
-    // 手动调整时区：UTC+8（中国时间）
-    const localTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-    const hours = localTime.getUTCHours().toString().padStart(2, '0');
-    const minutes = localTime.getUTCMinutes().toString().padStart(2, '0');
-    const currentTime = `${hours}:${minutes}`;
+    // 使用 Intl API 获取确切的中国时间，避免手动时区转换的误差
+    const chinaTimeStr = now.toLocaleTimeString('zh-CN', { 
+      timeZone: 'Asia/Shanghai', 
+      hour12: false,
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    // 确保格式为 HH:mm，并处理可能的中文冒号
+    const currentTime = chinaTimeStr.replace('：', ':');
     
     // 每分钟的第一次执行时打印当前时间
     if (config.enableDebugLog && currentTime !== lastCheckedMinute) {
-      logger.info(`[定时任务检查] 当前时间: ${currentTime}`);
+      logger.info(`[定时任务检查] 当前时间: ${currentTime} (上海时区)`);
     }
     
     if (currentTime === lastCheckedMinute) return;
@@ -104,45 +108,65 @@ export function apply(ctx: Context, config: Config) {
         logger.warn(`跳过配置不正确的任务: times 字段无效`);
         return false;
       }
-      const times = t.times.split(',').map(s => s.trim()).filter(s => s);
+      // 支持中英文逗号，并自动补全 9:30 这种格式为 09:30
+      const times = t.times.split(/[，,]/).map(s => {
+        let time = s.trim();
+        if (/^\d:\d{2}$/.test(time)) time = '0' + time;
+        return time;
+      }).filter(s => s);
+      
       const isMatch = times.includes(currentTime);
       if (config.enableDebugLog && isMatch) {
-        logger.info(`[时间匹配] ${currentTime} 在列表 [${times.join(',')}] 中`);
+        logger.info(`[时间匹配成功] 当前时间 ${currentTime} 命中任务设定列表 [${times.join(',')}]`);
       }
       return isMatch;
     });
     if (activeTasks.length === 0) return;
 
     lastCheckedMinute = currentTime;
-    if (config.enableDebugLog) {
-      logger.info(`[任务触发] 检测到定时任务: ${currentTime}, 共有 ${activeTasks.length} 个待执行任务`);
-    }
+    
+    // 即使在 info 级别也打印匹配到的任务，方便用户确认
+    logger.info(`[任务触发] 检测到 ${activeTasks.length} 个待执行的广播任务 (时间: ${currentTime})`);
 
     try {
       // 检查是否为交易日（基本周末检查 + 节假日API）
-      const day = localTime.getUTCDay();
-      const isWeekend = (day === 0 || day === 6);
-      const year = localTime.getUTCFullYear();
-      const month = (localTime.getUTCMonth() + 1).toString().padStart(2, '0');
-      const date = localTime.getUTCDate().toString().padStart(2, '0');
-      const dateStr = `${year}-${month}-${date}`;
+      // 使用 Intl API 获取上海日期的组件，确保逻辑一致
+      const formatter = new Intl.DateTimeFormat('zh-CN', {
+        timeZone: 'Asia/Shanghai',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        weekday: 'narrow'
+      });
+      const parts = formatter.formatToParts(now);
+      const getValue = (type: string) => parts.find(p => p.type === type)?.value || '';
+      const year = getValue('year');
+      const month = getValue('month');
+      const day = getValue('day');
+      
+      const shanghaiDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
+      const isWeekend = (shanghaiDate.getDay() === 0 || shanghaiDate.getDay() === 6);
+      const dateStr = `${year}-${month}-${day}`;
       
       let tradingDay = !isWeekend;
       try {
-        logger.debug(`正在检查交易日状态: ${dateStr}`);
+        if (config.enableDebugLog) logger.debug(`正在检查交易日状态: ${dateStr}`);
         const holidayData = await ctx.http.get(`https://timor.tech/api/holiday/info/${dateStr}`);
-        if (holidayData && holidayData.type) {
+        // 增加对 HTML 响应的防御（Cloudflare 拦截时会返回 HTML 字符串）
+        if (holidayData && typeof holidayData === 'object' && holidayData.type) {
           // type: 0 工作日, 1 周末, 2 节日, 3 调休
           const typeCode = holidayData.type.type;
           tradingDay = (typeCode === 0 || typeCode === 3);
           logger.info(`节假日API返回类型: ${typeCode} (${holidayData.type.name}), 交易日状态: ${tradingDay}`);
+        } else {
+          if (config.enableDebugLog) logger.warn(`节假日API返回了非预期的格式或被拦截，将回退到周末检查`);
         }
       } catch (e) {
         logger.warn(`节假日API请求失败，将使用基础周末检查: ${e.message}`);
       }
 
       if (!tradingDay) {
-        logger.info(`当前非交易日，跳过广播任务`);
+        logger.info(`[定时任务跳过] 当前日期 ${dateStr} 非交易日，跳过执行`);
         return;
       }
 
