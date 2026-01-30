@@ -371,7 +371,7 @@ export function apply(ctx: Context, config: Config) {
   ctx.command('活跃市值', '获取活跃市值数据')
     .action(async ({ session }) => {
       if (isUserInSpecificBlacklist(session, '活跃市值')) {
-        return '您已被加入黑名单，无法使用此功能。';
+        return;
       }
       
       try {
@@ -391,7 +391,7 @@ export function apply(ctx: Context, config: Config) {
   ctx.command('异动 <stockCode:text>', '获取指定股票的异动分析数据')
     .action(async ({ session }, stockCode) => {
       if (isUserInSpecificBlacklist(session, '异动')) {
-        return '您已被加入黑名单，无法使用此功能。';
+        return;
       }
       
       if (!stockCode) {
@@ -414,7 +414,7 @@ export function apply(ctx: Context, config: Config) {
   ctx.command('涨停看板', '获取涨停看板图片')
     .action(async ({ session }) => {
       if (isUserInSpecificBlacklist(session, '涨停看板')) {
-        return '您已被加入黑名单，无法使用此功能。';
+        return;
       }
       
       try {
@@ -439,7 +439,7 @@ export function apply(ctx: Context, config: Config) {
   ctx.command('跌停看板', '获取跌停看板图片')
     .action(async ({ session }) => {
       if (isUserInSpecificBlacklist(session, '跌停看板')) {
-        return '您已被加入黑名单，无法使用此功能。';
+        return;
       }
       
       try {
@@ -464,7 +464,7 @@ export function apply(ctx: Context, config: Config) {
   ctx.command('选股 <strategy:text>', '根据指定策略选股（支持策略：N型、填坑、少妇、突破、补票、少妇pro）')
     .action(async ({ session }, strategy) => {
       if (isUserInSpecificBlacklist(session, '选股')) {
-        return '您已被加入黑名单，无法使用此功能。';
+        return;
       }
       
       if (!strategy) {
@@ -516,7 +516,7 @@ export function apply(ctx: Context, config: Config) {
   ctx.command('骑', '获取骑图片')
     .action(async ({ session }) => {
       if (isUserInSpecificBlacklist(session, '骑')) {
-        return '您已被加入黑名单，无法使用此功能。';
+        return;
       }
       
       try {
@@ -547,7 +547,7 @@ export function apply(ctx: Context, config: Config) {
     
     if (content === '活跃市值') {
       if (isUserInSpecificBlacklist(session, '活跃市值')) {
-        return '您已被加入黑名单，无法使用此功能。';
+        return;
       }
       
       try {
@@ -562,7 +562,7 @@ export function apply(ctx: Context, config: Config) {
       }
     } else if (content?.startsWith('异动 ')) {
       if (isUserInSpecificBlacklist(session, '异动')) {
-        return '您已被加入黑名单，无法使用此功能。';
+        return;
       }
       
       // 解析股票代码
@@ -583,7 +583,7 @@ export function apply(ctx: Context, config: Config) {
       }
     } else if (content === '涨停看板') {
       if (isUserInSpecificBlacklist(session, '涨停看板')) {
-        return '您已被加入黑名单，无法使用此功能。';
+        return;
       }
       
       try {
@@ -604,7 +604,7 @@ export function apply(ctx: Context, config: Config) {
       }
     } else if (content === '跌停看板') {
       if (isUserInSpecificBlacklist(session, '跌停看板')) {
-        return '您已被加入黑名单，无法使用此功能。';
+        return;
       }
       
       try {
@@ -625,7 +625,7 @@ export function apply(ctx: Context, config: Config) {
       }
     } else if (content?.startsWith('选股 ')) {
       if (isUserInSpecificBlacklist(session, '选股')) {
-        return '您已被加入黑名单，无法使用此功能。';
+        return;
       }
       
       // 解析选股策略
@@ -675,7 +675,7 @@ export function apply(ctx: Context, config: Config) {
       }
     } else if (content === '骑') {
       if (isUserInSpecificBlacklist(session, '骑')) {
-        return '您已被加入黑名单，无法使用此功能。';
+        return;
       }
       
       try {
