@@ -69,6 +69,15 @@ export const Config: Schema<Config> = Schema.object({
 export function apply(ctx: Context, config: Config) {
   const logger = ctx.logger('stock');
   
+  // 待重试任务队列
+  interface RetryTask {
+    task: BroadcastTask;
+    originalTime: string;
+    retryCount: number;
+    lastAttemptTimestamp: number;
+  }
+  const retryQueue: RetryTask[] = [];
+
   // 插件启动日志
   logger.info('stock 插件已加载');
   logger.info(`当前配置: broadcastTasks=${config.broadcastTasks?.length || 0} 个任务`);
@@ -77,171 +86,194 @@ export function apply(ctx: Context, config: Config) {
       logger.info(`任务 ${idx + 1}: times=${task.times}, type=${task.type}, targetIds=${task.targetIds}, content=${task.content}`);
     });
   }
+
+  // 核心广播执行函数
+  async function performBroadcast(task: BroadcastTask, isRetry = false) {
+    const label = isRetry ? '[重试广播]' : '[初始广播]';
+    try {
+      if (!task.targetIds || typeof task.targetIds !== 'string') {
+        logger.warn(`${label} 任务配置不完整: targetIds 字段无效`);
+        return false;
+      }
+
+      const targetIds = task.targetIds.split(/[，,]/).map(id => id.trim()).filter(id => id);
+      if (targetIds.length === 0) {
+        logger.warn(`${label} 任务目标列表为空: ${task.content}`);
+        return false;
+      }
+
+      logger.info(`${label} 正在执行: ${task.content} -> ${targetIds.join(',')} (${task.type})`);
+      let message = '';
+      
+      // 1. 获取内容
+      if (task.content === '活跃市值') {
+        try {
+          const responseText = await ctx.http.get('http://stock.svip886.com/api/indexes', { responseType: 'text' });
+          message = `📊 定时广播 - 指数看板：\n\n${responseText}`;
+        } catch (apiErr) {
+          logger.error(`${label} 获取活跃市值 API 失败`, apiErr);
+          return false;
+        }
+      } else if (task.content === '涨停看板' || task.content === '跌停看板') {
+        try {
+          const apiType = task.content === '涨停看板' ? 'limit_up' : 'limit_down';
+          const imageUrl = `http://stock.svip886.com/api/${apiType}.png`;
+          const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
+          const base64Image = Buffer.from(imageBuffer).toString('base64');
+          message = `🔔 定时广播 - ${task.content}：\n<img src="data:image/png;base64,${base64Image}" />`;
+        } catch (apiErr) {
+          logger.error(`${label} 获取${task.content}图片 API 失败`, apiErr);
+          return false;
+        }
+      }
+
+      if (!message) return false;
+
+      // 2. 发送消息
+      const bot = ctx.bots.find(b => (b.status as any) === 'online' || (b.status as any) === 1) || ctx.bots[0];
+      if (!bot) {
+        logger.error(`${label} 无可用机器人实例`);
+        return false;
+      }
+
+      let allSuccess = true;
+      for (const targetId of targetIds) {
+        try {
+          if (task.type === 'private') {
+            await bot.sendPrivateMessage(targetId, message);
+          } else {
+            await bot.sendMessage(targetId, message);
+          }
+        } catch (err) {
+          logger.error(`${label} 发送失败 (${targetId}): ${err.message}`);
+          allSuccess = false;
+        }
+      }
+      return allSuccess;
+    } catch (error) {
+      logger.error(`${label} 执行过程发生严重错误`, error);
+      return false;
+    }
+  }
+
+  // 获取任务的下一个执行时间点
+  function getNextScheduledTime(task: BroadcastTask, currentTime: string): string | null {
+    const times = task.times.split(/[，,]/).map(s => {
+      let time = s.trim();
+      if (/^\d:\d{2}$/.test(time)) time = '0' + time;
+      return time;
+    }).sort();
+    
+    const currentIndex = times.indexOf(currentTime);
+    if (currentIndex === -1) return times[0]; // 如果当前时间不在列表里，假设下一个是第一个
+    return times[(currentIndex + 1) % times.length];
+  }
   
   // 定时任务逻辑
   let lastCheckedMinute = '';
 
   ctx.setInterval(async () => {
     const now = new Date();
-    // 使用 Intl API 获取确切的中国时间，避免手动时区转换的误差
+    const nowTimestamp = now.getTime();
     const chinaTimeStr = now.toLocaleTimeString('zh-CN', { 
       timeZone: 'Asia/Shanghai', 
       hour12: false,
       hour: '2-digit',
       minute: '2-digit'
     });
-    // 确保格式为 HH:mm，并处理可能的中文冒号
     const currentTime = chinaTimeStr.replace('：', ':');
     
-    // 每分钟的第一次执行时打印当前时间
     if (config.enableDebugLog && currentTime !== lastCheckedMinute) {
       logger.info(`[定时任务检查] 当前时间: ${currentTime} (上海时区)`);
     }
+
+    // --- 1. 处理重试队列 ---
+    for (let i = retryQueue.length - 1; i >= 0; i--) {
+      const item = retryQueue[i];
+      
+      // 检查是否达到1分钟间隔
+      if (nowTimestamp - item.lastAttemptTimestamp < 60000) continue;
+
+      // 检查是否超过了下次执行时间
+      const nextTime = getNextScheduledTime(item.task, item.originalTime);
+      // 如果当前时间已经达到了该任务的下一个预定时间，或者已经跨天了，则取消重试
+      if (nextTime && (currentTime === nextTime || (currentTime > nextTime && item.originalTime < nextTime))) {
+        logger.warn(`[重试取消] 任务 ${item.task.content} (${item.originalTime}) 已过期或达到下个周期`);
+        retryQueue.splice(i, 1);
+        continue;
+      }
+
+      item.retryCount++;
+      item.lastAttemptTimestamp = nowTimestamp;
+      
+      logger.info(`[开始重试] 任务 ${item.task.content} (原定于 ${item.originalTime}), 第 ${item.retryCount}/3 次重试`);
+      const success = await performBroadcast(item.task, true);
+      
+      if (success) {
+        logger.info(`[重试成功] 任务 ${item.task.content} 已成功补发`);
+        retryQueue.splice(i, 1);
+      } else if (item.retryCount >= 3) {
+        logger.error(`[重试失败] 任务 ${item.task.content} 已达到最大重试次数，放弃`);
+        retryQueue.splice(i, 1);
+      }
+    }
     
+    // --- 2. 处理初始任务 ---
     if (currentTime === lastCheckedMinute) return;
-    
     if (!config.broadcastTasks || config.broadcastTasks.length === 0) return;
 
-    // 检查当前时间是否有任务
     const activeTasks = config.broadcastTasks.filter(t => {
-      if (!t.times || typeof t.times !== 'string') {
-        logger.warn(`跳过配置不正确的任务: times 字段无效`);
-        return false;
-      }
-      // 支持中英文逗号，并自动补全 9:30 这种格式为 09:30
+      if (!t.times || typeof t.times !== 'string') return false;
       const times = t.times.split(/[，,]/).map(s => {
         let time = s.trim();
         if (/^\d:\d{2}$/.test(time)) time = '0' + time;
         return time;
       }).filter(s => s);
-      
-      const isMatch = times.includes(currentTime);
-      if (config.enableDebugLog && isMatch) {
-        logger.info(`[时间匹配成功] 当前时间 ${currentTime} 命中任务设定列表 [${times.join(',')}]`);
-      }
-      return isMatch;
+      return times.includes(currentTime);
     });
-    if (activeTasks.length === 0) return;
+
+    if (activeTasks.length === 0) {
+      if (currentTime !== lastCheckedMinute) lastCheckedMinute = currentTime;
+      return;
+    }
 
     lastCheckedMinute = currentTime;
-    
-    // 即使在 info 级别也打印匹配到的任务，方便用户确认
-    logger.info(`[任务触发] 检测到 ${activeTasks.length} 个待执行的广播任务 (时间: ${currentTime})`);
+    logger.info(`[任务触发] 命中 ${activeTasks.length} 个广播任务 (时间: ${currentTime})`);
 
     try {
-      // 检查是否为交易日（基本周末检查 + 节假日API）
-      // 使用 Intl API 获取上海日期的组件，确保逻辑一致
-      const formatter = new Intl.DateTimeFormat('zh-CN', {
-        timeZone: 'Asia/Shanghai',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        weekday: 'narrow'
-      });
-      const parts = formatter.formatToParts(now);
-      const getValue = (type: string) => parts.find(p => p.type === type)?.value || '';
-      const year = getValue('year');
-      const month = getValue('month');
-      const day = getValue('day');
-      
       const shanghaiDate = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Shanghai' }));
       const isWeekend = (shanghaiDate.getDay() === 0 || shanghaiDate.getDay() === 6);
+      const year = shanghaiDate.getFullYear();
+      const month = (shanghaiDate.getMonth() + 1).toString().padStart(2, '0');
+      const day = shanghaiDate.getDate().toString().padStart(2, '0');
       const dateStr = `${year}-${month}-${day}`;
       
       let tradingDay = !isWeekend;
       try {
-        if (config.enableDebugLog) logger.debug(`正在检查交易日状态: ${dateStr}`);
         const holidayData = await ctx.http.get(`https://timor.tech/api/holiday/info/${dateStr}`);
-        // 增加对 HTML 响应的防御（Cloudflare 拦截时会返回 HTML 字符串）
         if (holidayData && typeof holidayData === 'object' && holidayData.type) {
-          // type: 0 工作日, 1 周末, 2 节日, 3 调休
           const typeCode = holidayData.type.type;
           tradingDay = (typeCode === 0 || typeCode === 3);
-          logger.info(`节假日API返回类型: ${typeCode} (${holidayData.type.name}), 交易日状态: ${tradingDay}`);
-        } else {
-          if (config.enableDebugLog) logger.warn(`节假日API返回了非预期的格式或被拦截，将回退到周末检查`);
         }
       } catch (e) {
-        logger.warn(`节假日API请求失败，将使用基础周末检查: ${e.message}`);
+        logger.warn(`节假日API请求失败: ${e.message}`);
       }
 
       if (!tradingDay) {
-        logger.info(`[定时任务跳过] 当前日期 ${dateStr} 非交易日，跳过执行`);
+        logger.info(`[定时任务跳过] ${dateStr} 非交易日`);
         return;
       }
 
       for (const task of activeTasks) {
-        try {
-          // 验证配置完整性
-          if (!task.targetIds || typeof task.targetIds !== 'string') {
-            logger.warn(`任务配置不完整: targetIds 字段无效或为空, 内容: ${task.content}`);
-            continue;
-          }
-
-          const targetIds = task.targetIds.split(',').map(id => id.trim()).filter(id => id);
-          if (targetIds.length === 0) {
-            logger.warn(`任务目标列表为空: ${task.content}，原始值: ${task.targetIds}`);
-            continue;
-          }
-
-          logger.info(`正在执行广播任务: ${task.content} -> ${targetIds.join(',')} (${task.type})`);
-          let message = '';
-          if (task.content === '活跃市值') {
-            try {
-              logger.info(`开始获取活跃市值数据...`);
-              const responseText = await ctx.http.get('http://stock.svip886.com/api/indexes', { responseType: 'text' });
-              message = `📊 定时广播 - 指数看板：\n\n${responseText}`;
-              logger.info(`活跃市值数据获取成功, 信息长度: ${message.length}`);
-            } catch (apiErr) {
-              logger.error('获取活跃市值 API 失败', apiErr);
-              continue;
-            }
-          } else if (task.content === '涨停看板' || task.content === '跌停看板') {
-            try {
-              const apiType = task.content === '涨停看板' ? 'limit_up' : 'limit_down';
-              const imageUrl = `http://stock.svip886.com/api/${apiType}.png`;
-              logger.info(`开始下载图片: ${imageUrl}`);
-              const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
-              logger.info(`图片下载成功, 大小: ${imageBuffer.byteLength} bytes`);
-              const base64Image = Buffer.from(imageBuffer).toString('base64');
-              message = `🔔 定时广播 - ${task.content}：\n<img src="data:image/png;base64,${base64Image}" />`;
-              logger.info(`图片base64编码成功, 信息长度: ${message.length}`);
-            } catch (apiErr) {
-              logger.error(`获取${task.content}图片 API 失败`, apiErr);
-              continue;
-            }
-          } else {
-            logger.warn(`不支持的广播内容类型: ${task.content}`);
-            continue;
-          }
-
-          if (!message) {
-            logger.warn(`未能生成消息内容: ${task.content}`);
-            continue;
-          }
-
-          const bot = ctx.bots.find(b => (b.status as any) === 'online' || (b.status as any) === 1) || ctx.bots[0];
-          if (!bot) {
-            logger.error(`无可用机器人实例，总有 ${ctx.bots.length} 个机器人`);
-            continue;
-          }
-
-          logger.info(`找到机器人: ${bot.platform}, 开始向 ${targetIds.length} 个目标发送`);
-          for (const targetId of targetIds) {
-            try {
-              logger.info(`将发送给 ${targetId}, 类型: ${task.type}`);
-              if (task.type === 'private') {
-                await bot.sendPrivateMessage(targetId, message);
-              } else {
-                await bot.sendMessage(targetId, message);
-              }
-              logger.info(`广播任务发送成功: ${task.content} -> ${targetId}`);
-            } catch (err) {
-              logger.error(`广播任务发送失败 (${targetId}): ${task.content}`, err);
-            }
-          }
-        } catch (error) {
-          logger.error(`定时广播任务执行失败: ${task.content}`, error);
+        const success = await performBroadcast(task);
+        if (!success) {
+          logger.warn(`[任务入队] 任务 ${task.content} 执行失败，加入重试队列`);
+          retryQueue.push({
+            task,
+            originalTime: currentTime,
+            retryCount: 0,
+            lastAttemptTimestamp: nowTimestamp
+          });
         }
       }
     } catch (error) {
