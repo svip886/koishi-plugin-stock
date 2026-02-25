@@ -91,11 +91,31 @@ export function apply(ctx: Context, config: Config) {
     const fs = require('fs');
     const path = require('path');
     const jsonPath = path.resolve(__dirname, '../audio_mapping.json');
+    
+    logger.info(`[心法抽卡] 尝试加载心法数据文件: ${jsonPath}`);
+    
+    //检查文件是否存在
+    if (!fs.existsSync(jsonPath)) {
+      logger.error(`[心法抽卡] 心法数据文件不存在: ${jsonPath}`);
+      throw new Error('心法数据文件不存在');
+    }
+    
     const jsonData = fs.readFileSync(jsonPath, 'utf8');
+    logger.info(`[心法抽卡] 成功读取文件，数据长度: ${jsonData.length} 字符`);
+    
     heartMethods = JSON.parse(jsonData);
-    logger.info(`[心法抽卡] 成功加载 ${heartMethods.length} 条心法数据`);
+    logger.info(`[心法抽卡] 成功解析JSON，加载 ${heartMethods.length} 条心法数据`);
+    
+    //打印前几条数据作为示例
+    if (heartMethods.length > 0) {
+      logger.info(`[心法抽卡] 前3条心法示例:`);
+      heartMethods.slice(0, 3).forEach((method, index) => {
+        logger.info(`  ${index + 1}. ${method.code}: ${method.text} (${method.file})`);
+      });
+    }
   } catch (err) {
     logger.error('[心法抽卡] 加载心法数据失败:', err);
+    logger.error('[心法抽卡] 错误详情:', err.stack);
   }
   
   // 待重试任务队列
@@ -583,18 +603,23 @@ export function apply(ctx: Context, config: Config) {
   // 心法抽卡命令
   ctx.command('心法抽卡', '随机抽取一条交易心法')
     .action(async ({ session }) => {
+      logger.info(`[心法抽卡] 收到命令请求，当前心法数据量: ${heartMethods.length}`);
+      
       // 检查功能是否启用
       if (!config.enableHeartMethod) {
+        logger.warn('[心法抽卡] 功能被禁用');
         return '心法抽卡功能未启用';
       }
       
       // 检查黑名单
       if (isUserInSpecificBlacklist(session, '心法抽卡')) {
+        logger.info('[心法抽卡] 用户在黑名单中，静默处理');
         return;
       }
       
       // 检查是否有心法数据
       if (heartMethods.length === 0) {
+        logger.error('[心法抽卡] 心法数据为空');
         return '暂无心法数据，请联系管理员';
       }
       
@@ -610,7 +635,10 @@ export function apply(ctx: Context, config: Config) {
         const path = require('path');
         const audioPath = path.resolve(__dirname, `../audio/${selectedMethod.file}`);
         
+        logger.info(`[心法抽卡] 尝试读取音频文件: ${audioPath}`);
+        
         if (!fs.existsSync(audioPath)) {
+          logger.warn(`[心法抽卡] 音频文件不存在: ${audioPath}`);
           // 如果音频文件不存在，只返回文本
           return `🃏 心法抽卡\n\n${selectedMethod.text}\n\n(音频文件缺失: ${selectedMethod.file})`;
         }
@@ -619,11 +647,16 @@ export function apply(ctx: Context, config: Config) {
         const audioData = fs.readFileSync(audioPath);
         const base64Audio = audioData.toString('base64');
         
+        logger.info(`[心法抽卡] 音频文件读取成功，大小: ${audioData.length} 字节`);
+        
         // 返回音频消息
-        return `<audio src="data:audio/mp3;base64,${base64Audio}" />${selectedMethod.text}`;
+        const response = `<audio src="data:audio/mp3;base64,${base64Audio}" />${selectedMethod.text}`;
+        logger.info('[心法抽卡] 成功生成响应消息');
+        return response;
         
       } catch (error) {
         logger.error('[心法抽卡] 执行失败:', error);
+        logger.error('[心法抽卡] 错误堆栈:', error.stack);
         return '心法抽卡失败，请稍后重试';
       }
     });
