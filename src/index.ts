@@ -86,6 +86,7 @@ export function apply(ctx: Context, config: Config) {
   }
   
   let heartMethods: HeartMethod[] = [];
+  let jsonData: string = ''; //初始化为空字符串
   
   try {
     const fs = require('fs');
@@ -100,14 +101,30 @@ export function apply(ctx: Context, config: Config) {
       throw new Error('心法数据文件不存在');
     }
     
-    let jsonData = fs.readFileSync(jsonPath, 'utf8');
-    logger.info(`[心法抽卡] 成功读取文件，数据长度: ${jsonData.length} 字符`);
+    jsonData = fs.readFileSync(jsonPath, 'utf8');
+    logger.info(`[心法抽卡] 成功读取文件，原始数据长度: ${jsonData.length} 字符`);
+    logger.info(`[心法抽卡] 前10个字符的Unicode码点: ${Array.from(jsonData.slice(0, 10)).map((c: string) => c.charCodeAt(0)).join(',')}`);
     
-    //处理BOM字符
-    if (jsonData.charCodeAt(0) === 0xFEFF) {
-      logger.info('[心法抽卡] 检测到BOM字符，正在移除');
+    //彻底处理BOM字符 - 移除所有可能的BOM
+    let bomRemoved = false;
+    while (jsonData.charCodeAt(0) === 0xFEFF) {
       jsonData = jsonData.slice(1);
+      bomRemoved = true;
     }
+    
+    if (bomRemoved) {
+      logger.info(`[心法抽卡] 检测并移除BOM字符，处理后长度: ${jsonData.length} 字符`);
+    } else {
+      logger.info('[心法抽卡] 未检测到BOM字符');
+    }
+    
+    //额外检查常见的BOM变体
+    if (jsonData.startsWith('\u00BB\u00BF\u00BF')) { // UTF-8 BOM变体
+      jsonData = jsonData.slice(3);
+      logger.info('[心法抽卡] 检测到UTF-8 BOM变体并移除');
+    }
+    
+    logger.info(`[心法抽卡] 最终数据长度: ${jsonData.length} 字符`);
     
     heartMethods = JSON.parse(jsonData);
     logger.info(`[心法抽卡] 成功解析JSON，加载 ${heartMethods.length} 条心法数据`);
@@ -122,6 +139,10 @@ export function apply(ctx: Context, config: Config) {
   } catch (err) {
     logger.error('[心法抽卡] 加载心法数据失败:', err);
     logger.error('[心法抽卡] 错误详情:', err.stack);
+    //记录原始数据的前100个字符用于调试
+    if (typeof jsonData !== 'undefined') {
+      logger.error(`[心法抽卡] 原始数据前100字符: ${jsonData.substring(0, 100)}`);
+    }
   }
   
   // 待重试任务队列
