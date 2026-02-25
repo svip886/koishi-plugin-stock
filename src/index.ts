@@ -100,8 +100,14 @@ export function apply(ctx: Context, config: Config) {
       throw new Error('心法数据文件不存在');
     }
     
-    const jsonData = fs.readFileSync(jsonPath, 'utf8');
+    let jsonData = fs.readFileSync(jsonPath, 'utf8');
     logger.info(`[心法抽卡] 成功读取文件，数据长度: ${jsonData.length} 字符`);
+    
+    //处理BOM字符
+    if (jsonData.charCodeAt(0) === 0xFEFF) {
+      logger.info('[心法抽卡] 检测到BOM字符，正在移除');
+      jsonData = jsonData.slice(1);
+    }
     
     heartMethods = JSON.parse(jsonData);
     logger.info(`[心法抽卡] 成功解析JSON，加载 ${heartMethods.length} 条心法数据`);
