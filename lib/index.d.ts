@@ -22,6 +22,9 @@ export interface Config {
     stockSelectionChannelBlacklist?: string[];
     rideChannelBlacklist?: string[];
     broadcastTasks?: BroadcastTask[];
+    enableHeartMethod?: boolean;
+    heartMethodBlacklist?: string[];
+    heartMethodChannelBlacklist?: string[];
 }
 export declare const Config: Schema<Config>;
 export declare function apply(ctx: Context, config: Config): void;

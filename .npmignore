@@ -5,3 +5,5 @@ lib/
 coverage/
 *.log
 *.zip
+.vscode
+.qoder

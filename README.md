@@ -1,6 +1,6 @@
 # koishi-plugin-stock
 
-一个Koishi插件，当用户发送特定命令时自动获取股票数据并显示结果。支持活跃市值、异动分析、涨停看板、跌停看板和选股功能，并提供指令级黑名单配置和定时广播任务。
+一个Koishi插件，当用户发送特定命令时自动获取股票数据并显示结果。支持活跃市值、异动分析、涨停看板、跌停看板、选股和心法抽卡功能，并提供指令级黑名单配置和定时广播任务。
 
 ## 功能
 
@@ -10,6 +10,7 @@
 - 用户发送"跌停看板"命令时，自动从 `limit_down`API下载图片并显示
 - 用户发送"选股 [策略名称]"命令时，自动从 `dyq_select` API获取选股结果
 - 用户发送"骑"命令时，自动返回 `images/qi.jpeg` 图片
+- 用户发送"心法抽卡"命令时，随机抽取一条交易心法并播放对应音频
 - 支持定时广播任务，可自定义时间发送活跃市值、涨停/跌停看板（仅交易日广播）
 - 支持为每个指令单独设置黑名单，可限制特定用户使用特定功能
 - 自动格式化数据显示给用户
@@ -31,6 +32,7 @@ npm install koishi-plugin-stock
 - `limitDownBoardBlacklist`: 跌停看板指令黑名单用户ID数组
 - `stockSelectionBlacklist`: 选股指令黑名单用户ID数组
 - `rideBlacklist`: 骑指令黑名单用户ID数组
+- `heartMethodBlacklist`: 心法抽卡指令黑名单用户ID数组
 - `allCommandsChannelBlacklist`: 全部指令黑名单频道ID数组
 - `activeMarketCapChannelBlacklist`: 活跃市值指令黑名单频道ID数组
 - `stockAlertChannelBlacklist`: 异动指令黑名单频道ID数组
@@ -38,6 +40,7 @@ npm install koishi-plugin-stock
 - `limitDownBoardChannelBlacklist`: 跌停看板指令黑名单频道ID数组
 - `stockSelectionChannelBlacklist`: 选股指令黑名单频道ID数组
 - `rideChannelBlacklist`: 骑指令黑名单频道ID数组
+- `heartMethodChannelBlacklist`: 心法抽卡指令黑名单频道ID数组
 - `broadcastTasks`: 定时广播任务列表，每个任务包含：
   - `times`: 触发时间 (逗号分隔的事列，如 `09:30,15:00`)
   - `type`: 消息类型 (private/channel)
@@ -52,10 +55,16 @@ npm install koishi-plugin-stock
 - 发送"跌停看板"获取跌停股票看板图片
 - 发送"选股 [策略名称或编号]"获取选股结果，支持的策略：N型(1)、填坑(2)、少妇(3)、突破(4)、补票(5)、少妇pro(6)
 - 发送"骑"获取图片
+- 发送"心法抽卡"随机抽取一条交易心法并播放对应音频
 
 配置黑名单可在插件设置中进行，将特定用户ID添加到相应指令的黑名单中即可限制其使用权限。
 
 ## 更新日志
+
+### v2.0.9 (2026-02-25)
+- 新增心法抽卡功能：用户发送"心法抽卡"命令时，随机抽取一条交易心法并播放对应音频
+- 新增心法抽卡黑白名单配置：支持为心法抽卡功能单独设置用户和频道黑名单
+- 完善插件文件包含：将audio目录和audio_mapping.json包含在npm包中
 
 ### v2.0.8 (2026-01-30)
 - 优化黑名单处理逻辑：当触发指令的用户或频道处于黑名单时，插件将静默处理（直接不回复），不再发送提示消息。

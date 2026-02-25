@@ -9,3 +9,5 @@ temp/
 .DS_Store
 Thumbs.db
 *.zip
+.vscode/
+.qoder/

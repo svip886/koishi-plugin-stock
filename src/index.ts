@@ -24,6 +24,10 @@ export interface Config {
   stockSelectionChannelBlacklist?: string[]
   rideChannelBlacklist?: string[]
   broadcastTasks?: BroadcastTask[]
+  //心法抽卡配置
+  enableHeartMethod?: boolean
+  heartMethodBlacklist?: string[]
+  heartMethodChannelBlacklist?: string[]
 }
 
 const BroadcastTask: Schema<BroadcastTask> = Schema.object({
@@ -52,6 +56,7 @@ export const Config: Schema<Config> = Schema.object({
   limitDownBoardBlacklist: Schema.array(String).description('跌停看板指令黑名单用户ID'),
   stockSelectionBlacklist: Schema.array(String).description('选股指令黑名单用户ID'),
   rideBlacklist: Schema.array(String).description('骑指令黑名单用户ID'),
+  heartMethodBlacklist: Schema.array(String).description('心法抽卡指令黑名单用户ID'),
   
   // --- 频道黑名单 ---
   allCommandsChannelBlacklist: Schema.array(String).description('全部指令黑名单频道ID'),
@@ -61,13 +66,37 @@ export const Config: Schema<Config> = Schema.object({
   limitDownBoardChannelBlacklist: Schema.array(String).description('跌停看板指令黑名单频道ID'),
   stockSelectionChannelBlacklist: Schema.array(String).description('选股指令黑名单频道ID'),
   rideChannelBlacklist: Schema.array(String).description('骑指令黑名单频道ID'),
+  heartMethodChannelBlacklist: Schema.array(String).description('心法抽卡指令黑名单频道ID'),
   
   // --- 定时广播 ---
   broadcastTasks: Schema.array(BroadcastTask).description('定时广播任务列表'),
+  
+  // --- 心法抽卡 ---
+  enableHeartMethod: Schema.boolean().description('启用心法抽卡功能').default(true),
 })
 
 export function apply(ctx: Context, config: Config) {
   const logger = ctx.logger('stock');
+  
+  //加载心法数据
+  interface HeartMethod {
+    code: string;
+    text: string;
+    file: string;
+  }
+  
+  let heartMethods: HeartMethod[] = [];
+  
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const jsonPath = path.resolve(__dirname, '../audio_mapping.json');
+    const jsonData = fs.readFileSync(jsonPath, 'utf8');
+    heartMethods = JSON.parse(jsonData);
+    logger.info(`[心法抽卡] 成功加载 ${heartMethods.length} 条心法数据`);
+  } catch (err) {
+    logger.error('[心法抽卡] 加载心法数据失败:', err);
+  }
   
   // 待重试任务队列
   interface RetryTask {
@@ -318,6 +347,11 @@ export function apply(ctx: Context, config: Config) {
           return true;
         }
         break;
+      case '心法抽卡':
+        if (config.heartMethodBlacklist?.includes(userId)) {
+          return true;
+        }
+        break;
     }
     
     // 检查特定指令的频道黑名单
@@ -349,6 +383,11 @@ export function apply(ctx: Context, config: Config) {
         break;
       case '骑':
         if (config.rideChannelBlacklist?.includes(channelId)) {
+          return true;
+        }
+        break;
+      case '心法抽卡':
+        if (config.heartMethodChannelBlacklist?.includes(channelId)) {
           return true;
         }
         break;
@@ -538,6 +577,54 @@ export function apply(ctx: Context, config: Config) {
       } catch (error) {
         console.error('获取骑图片失败:', error);
         return '获取骑图片失败，请稍后重试。';
+      }
+    });
+
+  // 心法抽卡命令
+  ctx.command('心法抽卡', '随机抽取一条交易心法')
+    .action(async ({ session }) => {
+      // 检查功能是否启用
+      if (!config.enableHeartMethod) {
+        return '心法抽卡功能未启用';
+      }
+      
+      // 检查黑名单
+      if (isUserInSpecificBlacklist(session, '心法抽卡')) {
+        return;
+      }
+      
+      // 检查是否有心法数据
+      if (heartMethods.length === 0) {
+        return '暂无心法数据，请联系管理员';
+      }
+      
+      try {
+        // 随机选择一个心法
+        const randomIndex = Math.floor(Math.random() * heartMethods.length);
+        const selectedMethod = heartMethods[randomIndex];
+        
+        logger.info(`[心法抽卡] 用户 ${session?.userId || '未知'} 抽中: ${selectedMethod.code} - ${selectedMethod.text}`);
+        
+        // 读取音频文件
+        const fs = require('fs');
+        const path = require('path');
+        const audioPath = path.resolve(__dirname, `../audio/${selectedMethod.file}`);
+        
+        if (!fs.existsSync(audioPath)) {
+          // 如果音频文件不存在，只返回文本
+          return `🃏 心法抽卡\n\n${selectedMethod.text}\n\n(音频文件缺失: ${selectedMethod.file})`;
+        }
+        
+        // 读取音频文件并转换为base64
+        const audioData = fs.readFileSync(audioPath);
+        const base64Audio = audioData.toString('base64');
+        
+        // 返回音频消息
+        return `<audio src="data:audio/mp3;base64,${base64Audio}" />${selectedMethod.text}`;
+        
+      } catch (error) {
+        logger.error('[心法抽卡] 执行失败:', error);
+        return '心法抽卡失败，请稍后重试';
       }
     });
 
