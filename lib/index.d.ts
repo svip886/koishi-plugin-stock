@@ -1,11 +1,11 @@
 import { Context, Schema } from 'koishi';
-export interface BroadcastTask {
+interface BroadcastTask {
     times: string;
     type: 'private' | 'channel';
     targetIds: string;
     content: '活跃市值' | '涨停看板' | '跌停看板';
 }
-export interface Config {
+interface Config {
     enableDebugLog?: boolean;
     allCommandsBlacklist?: string[];
     activeMarketCapBlacklist?: string[];
@@ -28,5 +28,71 @@ export interface Config {
     verifyCardBlacklist?: string[];
     verifyCardChannelBlacklist?: string[];
 }
-export declare const Config: Schema<Config>;
+export declare const ConfigSchema: Schema<Schemastery.ObjectS<{
+    enableDebugLog: Schema<boolean, boolean>;
+    allCommandsBlacklist: Schema<string[], string[]>;
+    activeMarketCapBlacklist: Schema<string[], string[]>;
+    stockAlertBlacklist: Schema<string[], string[]>;
+    limitUpBoardBlacklist: Schema<string[], string[]>;
+    limitDownBoardBlacklist: Schema<string[], string[]>;
+    stockSelectionBlacklist: Schema<string[], string[]>;
+    rideBlacklist: Schema<string[], string[]>;
+    heartMethodBlacklist: Schema<string[], string[]>;
+    verifyCardBlacklist: Schema<string[], string[]>;
+    allCommandsChannelBlacklist: Schema<string[], string[]>;
+    activeMarketCapChannelBlacklist: Schema<string[], string[]>;
+    stockAlertChannelBlacklist: Schema<string[], string[]>;
+    limitUpBoardChannelBlacklist: Schema<string[], string[]>;
+    limitDownBoardChannelBlacklist: Schema<string[], string[]>;
+    stockSelectionChannelBlacklist: Schema<string[], string[]>;
+    rideChannelBlacklist: Schema<string[], string[]>;
+    heartMethodChannelBlacklist: Schema<string[], string[]>;
+    verifyCardChannelBlacklist: Schema<string[], string[]>;
+    broadcastTasks: Schema<Schemastery.ObjectS<{
+        times: Schema<string, string>;
+        type: Schema<"private" | "channel", "private" | "channel">;
+        targetIds: Schema<string, string>;
+        content: Schema<"活跃市值" | "涨停看板" | "跌停看板", "活跃市值" | "涨停看板" | "跌停看板">;
+    }>[], Schemastery.ObjectT<{
+        times: Schema<string, string>;
+        type: Schema<"private" | "channel", "private" | "channel">;
+        targetIds: Schema<string, string>;
+        content: Schema<"活跃市值" | "涨停看板" | "跌停看板", "活跃市值" | "涨停看板" | "跌停看板">;
+    }>[]>;
+    enableHeartMethod: Schema<boolean, boolean>;
+}>, Schemastery.ObjectT<{
+    enableDebugLog: Schema<boolean, boolean>;
+    allCommandsBlacklist: Schema<string[], string[]>;
+    activeMarketCapBlacklist: Schema<string[], string[]>;
+    stockAlertBlacklist: Schema<string[], string[]>;
+    limitUpBoardBlacklist: Schema<string[], string[]>;
+    limitDownBoardBlacklist: Schema<string[], string[]>;
+    stockSelectionBlacklist: Schema<string[], string[]>;
+    rideBlacklist: Schema<string[], string[]>;
+    heartMethodBlacklist: Schema<string[], string[]>;
+    verifyCardBlacklist: Schema<string[], string[]>;
+    allCommandsChannelBlacklist: Schema<string[], string[]>;
+    activeMarketCapChannelBlacklist: Schema<string[], string[]>;
+    stockAlertChannelBlacklist: Schema<string[], string[]>;
+    limitUpBoardChannelBlacklist: Schema<string[], string[]>;
+    limitDownBoardChannelBlacklist: Schema<string[], string[]>;
+    stockSelectionChannelBlacklist: Schema<string[], string[]>;
+    rideChannelBlacklist: Schema<string[], string[]>;
+    heartMethodChannelBlacklist: Schema<string[], string[]>;
+    verifyCardChannelBlacklist: Schema<string[], string[]>;
+    broadcastTasks: Schema<Schemastery.ObjectS<{
+        times: Schema<string, string>;
+        type: Schema<"private" | "channel", "private" | "channel">;
+        targetIds: Schema<string, string>;
+        content: Schema<"活跃市值" | "涨停看板" | "跌停看板", "活跃市值" | "涨停看板" | "跌停看板">;
+    }>[], Schemastery.ObjectT<{
+        times: Schema<string, string>;
+        type: Schema<"private" | "channel", "private" | "channel">;
+        targetIds: Schema<string, string>;
+        content: Schema<"活跃市值" | "涨停看板" | "跌停看板", "活跃市值" | "涨停看板" | "跌停看板">;
+    }>[]>;
+    enableHeartMethod: Schema<boolean, boolean>;
+}>>;
+export declare const name = "stock";
 export declare function apply(ctx: Context, config: Config): void;
+export {};
