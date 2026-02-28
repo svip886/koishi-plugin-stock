@@ -25,6 +25,8 @@ export interface Config {
     enableHeartMethod?: boolean;
     heartMethodBlacklist?: string[];
     heartMethodChannelBlacklist?: string[];
+    verifyCardBlacklist?: string[];
+    verifyCardChannelBlacklist?: string[];
 }
 export declare const Config: Schema<Config>;
 export declare function apply(ctx: Context, config: Config): void;

@@ -28,6 +28,8 @@ export interface Config {
   enableHeartMethod?: boolean
   heartMethodBlacklist?: string[]
   heartMethodChannelBlacklist?: string[]
+  verifyCardBlacklist?: string[]  
+  verifyCardChannelBlacklist?: string[]
 }
 
 const BroadcastTask: Schema<BroadcastTask> = Schema.object({
@@ -57,6 +59,7 @@ export const Config: Schema<Config> = Schema.object({
   stockSelectionBlacklist: Schema.array(String).description('选股指令黑名单用户ID'),
   rideBlacklist: Schema.array(String).description('骑指令黑名单用户ID'),
   heartMethodBlacklist: Schema.array(String).description('心法抽卡指令黑名单用户ID'),
+  verifyCardBlacklist: Schema.array(String).description('验牌指令黑名单用户ID'),
   
   // --- 频道黑名单 ---
   allCommandsChannelBlacklist: Schema.array(String).description('全部指令黑名单频道ID'),
@@ -67,6 +70,7 @@ export const Config: Schema<Config> = Schema.object({
   stockSelectionChannelBlacklist: Schema.array(String).description('选股指令黑名单频道ID'),
   rideChannelBlacklist: Schema.array(String).description('骑指令黑名单频道ID'),
   heartMethodChannelBlacklist: Schema.array(String).description('心法抽卡指令黑名单频道ID'),
+  verifyCardChannelBlacklist: Schema.array(String).description('验牌指令黑名单频道ID'),
   
   // --- 定时广播 ---
   broadcastTasks: Schema.array(BroadcastTask).description('定时广播任务列表'),
@@ -401,6 +405,11 @@ export function apply(ctx: Context, config: Config) {
           return true;
         }
         break;
+      case '验牌':
+        if (config.verifyCardBlacklist?.includes(userId)) {
+          return true;
+        }
+        break;
     }
     
     // 检查特定指令的频道黑名单
@@ -437,6 +446,11 @@ export function apply(ctx: Context, config: Config) {
         break;
       case '心法抽卡':
         if (config.heartMethodChannelBlacklist?.includes(channelId)) {
+          return true;
+        }
+        break;
+      case '验牌':
+        if (config.verifyCardChannelBlacklist?.includes(channelId)) {
           return true;
         }
         break;
@@ -687,6 +701,75 @@ export function apply(ctx: Context, config: Config) {
         logger.error('[心法抽卡] 执行失败:', error);
         logger.error('[心法抽卡] 错误堆栈:', error.stack);
         return '心法抽卡失败，请稍后重试';
+      }
+    });
+
+  // 我要验牌命令
+  ctx.command('我要验牌 [param:text]', '验牌功能：查看指定序号的心法或查看全部心法')
+    .action(async ({ session }, param) => {
+      // 检查黑名单
+      if (isUserInSpecificBlacklist(session, '验牌')) {
+        return;
+      }
+      
+      // 检查是否有心法数据
+      if (heartMethods.length === 0) {
+        return '暂无心法数据';
+      }
+      
+      try {
+        // 处理"全部"参数
+        if (param && param.trim() === '全部') {
+          logger.info(`[验牌] 用户 ${session?.userId || '未知'} 请求查看全部心法`);
+          
+          // 生成带序号的完整列表
+          let result = '🃏 全部心法列表：\n\n';
+          heartMethods.forEach((method, index) => {
+            result += `${index + 1}. ${method.text}\n`;
+          });
+          
+          logger.info(`[验牌] 成功生成全部心法列表，共 ${heartMethods.length} 条`);
+          return result;
+        }
+        
+        // 处理数字序号参数
+        if (param && /^\d+$/.test(param.trim())) {
+          const index = parseInt(param.trim()) - 1; // 转换为0基索引
+          
+          if (index < 0 || index >= heartMethods.length) {
+            return `序号超出范围，请输入 1-${heartMethods.length} 之间的数字`;
+          }
+          
+          const selectedMethod = heartMethods[index];
+          logger.info(`[验牌] 用户 ${session?.userId || '未知'} 查看序号 ${index + 1}: ${selectedMethod.code}`);
+          
+          // 读取对应的音频文件
+          const fs = require('fs');
+          const path = require('path');
+          const audioPath = path.resolve(__dirname, `../audio/${selectedMethod.file}`);
+          
+          if (!fs.existsSync(audioPath)) {
+            // 音频文件不存在，只返回文本
+            return `🃏 验牌结果 #${index + 1}\n\n${selectedMethod.text}\n\n(音频文件缺失: ${selectedMethod.file})`;
+          }
+          
+          // 读取音频文件并转换为base64
+          const audioData = fs.readFileSync(audioPath);
+          const base64Audio = audioData.toString('base64');
+          
+          // 返回音频消息
+          const response = `<audio src="data:audio/mp3;base64,${base64Audio}" />#${index + 1} ${selectedMethod.text}`;
+          logger.info(`[验牌] 成功生成序号 ${index + 1} 的响应`);
+          return response;
+        }
+        
+        // 参数格式错误
+        return '参数格式错误。请使用：\n"我要验牌 全部" - 查看所有心法\n"我要验牌 <序号>" - 查看指定序号的心法(1-58)';
+        
+      } catch (error) {
+        logger.error('[验牌] 执行失败:', error);
+        logger.error('[验牌] 错误详情:', error.stack);
+        return '验牌失败，请稍后重试';
       }
     });
 
