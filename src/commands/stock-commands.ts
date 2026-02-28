@@ -126,12 +126,24 @@ export class StockCommands {
         }
         
         try {
-          const imageUrl = 'http://stock.svip886.com/images/qi.jpeg'
-          const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' })
-          const base64Image = Buffer.from(imageBuffer).toString('base64')
+          // 读取本地图片文件
+          const fs = require('fs')
+          const path = require('path')
+          const imagePath = path.resolve(__dirname, '../../images/qi.jpeg')
+          
+          if (!fs.existsSync(imagePath)) {
+            logger.error('骑图片文件不存在:', imagePath)
+            return '骑图片文件缺失，请联系管理员'
+          }
+          
+          // 读取图片文件并转换为base64
+          const imageBuffer = fs.readFileSync(imagePath)
+          const base64Image = imageBuffer.toString('base64')
+          
           return `<img src="data:image/jpeg;base64,${base64Image}" />`
         } catch (error) {
           logger.error('获取骑图片失败:', error)
+          logger.error('错误详情:', error.stack)
           return '获取骑图片失败，请稍后重试。'
         }
       })
