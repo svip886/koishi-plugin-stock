@@ -67,6 +67,7 @@ export const HEART_METHODS: HeartMethod[] = [
   {code: 'M55', text: '留得青山在，一定有下一个小米', file: 'M55.mp3'},
   {code: 'M56', text: '不要抱有偏见', file: 'M56.mp3'},
   {code: 'M57', text: '散户最重要的是心态，是不要和这个市场杠，要从自身找原因', file: 'M57.mp3'},
+  { code: 'M58', text: '我能怎么办，我真的我，我，我真的没招了，我', file: 'M58.mp3' },
 ]
 
 // 心法相关工具函数
