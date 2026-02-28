@@ -87,6 +87,9 @@ export const ConfigSchema = Schema.object({
   enableHeartMethod: Schema.boolean().description('启用心法抽卡功能').default(true),
 })
 
+// 为Koishi兼容性导出Config
+export const Config = ConfigSchema
+
 export const name = 'stock'
 
 export function apply(ctx: Context, config: Config) {
