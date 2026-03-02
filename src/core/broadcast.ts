@@ -75,7 +75,7 @@ export class BroadcastScheduler {
                 const responseText = await httpRequestWithRetry(ctx, 'https://stock.svip886.com/api/indexes', { 
                   responseType: 'text'
                 })
-                messageContent = `📊 指数看板：\n\n${responseText}`
+                messageContent = `📊指数看板：\n\n${responseText}`
               } catch (error) {
                 logger.error('[定时任务] 获取活跃市值数据失败:', error)
                 messageContent = '获取活跃市值数据失败，请稍后重试。'
@@ -105,6 +105,9 @@ export class BroadcastScheduler {
                 messageContent = '获取跌停看板图片失败，请稍后重试。'
               }
             }
+
+            // 添加定时广播前缀
+            messageContent = `[定时广播 - ${task.content}] ${messageContent}`
 
             // 执行广播任务
             const targets = task.targetIds.split(',').map(id => id.trim()).filter(id => id)
