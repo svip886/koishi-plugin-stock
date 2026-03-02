@@ -1,6 +1,43 @@
 import { Context } from 'koishi'
 import { isUserInSpecificBlacklist } from '../utils/blacklist'
 
+// 带重试机制的HTTP请求函数
+async function httpRequestWithRetry<T = any>(
+  ctx: Context,
+  url: string,
+  options: any,
+  maxRetries: number = 3
+): Promise<T> {
+  const logger = ctx.logger('stock')
+  let lastError: Error = new Error('Unknown error')  // 初始化错误对象
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logger.info(`第${attempt}次尝试请求: ${url}`)
+      const result = await ctx.http.get(url, {
+        ...options,
+        timeout: 10000  // 设置为10秒超时
+      })
+      logger.info(`第${attempt}次请求成功`)
+      return result
+    } catch (error) {
+      lastError = error
+      logger.warn(`第${attempt}次请求失败:`, error.message)
+      
+      // 如果不是最后一次尝试，等待一段时间后重试
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000 // 指数退避: 2s, 4s, 8s
+        logger.info(`等待${delay}ms后进行第${attempt + 1}次重试`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+  }
+  
+  // 所有重试都失败了
+  logger.error(`所有${maxRetries}次重试都失败了`)
+  throw lastError
+}
+
 export class StockCommands {
   static register(ctx: Context, config: any) {
     const logger = ctx.logger('stock')
@@ -13,10 +50,9 @@ export class StockCommands {
         }
         
         try {
-          // 增加重试机制和更长的超时时间
-          const responseText = await ctx.http.get('https://stock.svip886.com/api/indexes', { 
-            responseType: 'text',
-            timeout: 15000  // 增加超时时间到15秒
+          // 使用带重试机制的HTTP请求
+          const responseText = await httpRequestWithRetry(ctx, 'https://stock.svip886.com/api/indexes', { 
+            responseType: 'text'
           })
           return `📊 指数看板：\n\n${responseText}`
         } catch (error) {
@@ -43,10 +79,9 @@ export class StockCommands {
         }
         
         try {
-          // 增加重试机制和更长的超时时间
-          const responseText = await ctx.http.get(`https://stock.svip886.com/api/analyze?code=${stockCode}`, { 
-            responseType: 'text',
-            timeout: 15000
+          // 使用带重试机制的HTTP请求
+          const responseText = await httpRequestWithRetry(ctx, `https://stock.svip886.com/api/analyze?code=${stockCode}`, { 
+            responseType: 'text'
           })
           return `📈 股票 ${stockCode} 异动分析：\n\n${responseText}`
         } catch (error) {
@@ -68,11 +103,10 @@ export class StockCommands {
         }
         
         try {
-          // 增加超时时间
+          // 使用带重试机制的HTTP请求获取图片
           const imageUrl = 'https://stock.svip886.com/api/limit_up.png'
-          const imageBuffer = await ctx.http.get(imageUrl, { 
-            responseType: 'arraybuffer',
-            timeout: 15000
+          const imageBuffer = await httpRequestWithRetry(ctx, imageUrl, { 
+            responseType: 'arraybuffer'
           })
           const base64Image = Buffer.from(imageBuffer).toString('base64')
           return `<img src="data:image/png;base64,${base64Image}" />`
@@ -95,11 +129,10 @@ export class StockCommands {
         }
         
         try {
-          // 增加超时时间
+          // 使用带重试机制的HTTP请求获取图片
           const imageUrl = 'https://stock.svip886.com/api/limit_down.png'
-          const imageBuffer = await ctx.http.get(imageUrl, { 
-            responseType: 'arraybuffer',
-            timeout: 15000
+          const imageBuffer = await httpRequestWithRetry(ctx, imageUrl, { 
+            responseType: 'arraybuffer'
           })
           const base64Image = Buffer.from(imageBuffer).toString('base64')
           return `<img src="data:image/png;base64,${base64Image}" />`
@@ -147,10 +180,9 @@ export class StockCommands {
         }
         
         try {
-          // 增加重试机制和更长的超时时间
-          const responseText = await ctx.http.get(`https://stock.svip886.com/api/dyq_${apiEndpoint}`, { 
-            responseType: 'text',
-            timeout: 15000
+          // 使用带重试机制的HTTP请求
+          const responseText = await httpRequestWithRetry(ctx, `https://stock.svip886.com/api/dyq_${apiEndpoint}`, { 
+            responseType: 'text'
           })
           return `🎯 选股结果 (${strategy}): \n\n${responseText}`
         } catch (error) {
