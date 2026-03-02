@@ -13,10 +13,20 @@ export class StockCommands {
         }
         
         try {
-          const responseText = await ctx.http.get('http://stock.svip886.com/api/indexes', { responseType: 'text' })
+          // 增加重试机制和更长的超时时间
+          const responseText = await ctx.http.get('https://stock.svip886.com/api/indexes', { 
+            responseType: 'text',
+            timeout: 15000  // 增加超时时间到15秒
+          })
           return `📊 指数看板：\n\n${responseText}`
         } catch (error) {
           logger.error('获取活跃市值数据失败:', error)
+          logger.error('错误类型:', error.constructor.name)
+          logger.error('错误消息:', error.message)
+          // 提供更有帮助的错误信息
+          if (error.message && error.message.includes('timeout')) {
+            return '获取活跃市值数据超时，请检查网络连接后重试。'
+          }
           return '获取活跃市值数据失败，请稍后重试。'
         }
       })
@@ -33,10 +43,19 @@ export class StockCommands {
         }
         
         try {
-          const responseText = await ctx.http.get(`http://stock.svip886.com/api/analyze?code=${stockCode}`, { responseType: 'text' })
+          // 增加重试机制和更长的超时时间
+          const responseText = await ctx.http.get(`https://stock.svip886.com/api/analyze?code=${stockCode}`, { 
+            responseType: 'text',
+            timeout: 15000
+          })
           return `📈 股票 ${stockCode} 异动分析：\n\n${responseText}`
         } catch (error) {
           logger.error('获取股票异动数据失败:', error)
+          logger.error('错误类型:', error.constructor.name)
+          logger.error('错误消息:', error.message)
+          if (error.message && error.message.includes('timeout')) {
+            return `获取股票 ${stockCode} 异动数据超时，请检查网络连接后重试。`
+          }
           return `获取股票 ${stockCode} 异动数据失败，请稍后重试。`
         }
       })
@@ -49,12 +68,21 @@ export class StockCommands {
         }
         
         try {
-          const imageUrl = 'http://stock.svip886.com/api/limit_up.png'
-          const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' })
+          // 增加超时时间
+          const imageUrl = 'https://stock.svip886.com/api/limit_up.png'
+          const imageBuffer = await ctx.http.get(imageUrl, { 
+            responseType: 'arraybuffer',
+            timeout: 15000
+          })
           const base64Image = Buffer.from(imageBuffer).toString('base64')
           return `<img src="data:image/png;base64,${base64Image}" />`
         } catch (error) {
           logger.error('获取涨停看板图片失败:', error)
+          logger.error('错误类型:', error.constructor.name)
+          logger.error('错误消息:', error.message)
+          if (error.message && error.message.includes('timeout')) {
+            return '获取涨停看板图片超时，请检查网络连接后重试。'
+          }
           return '获取涨停看板图片失败，请稍后重试。'
         }
       })
@@ -67,12 +95,21 @@ export class StockCommands {
         }
         
         try {
-          const imageUrl = 'http://stock.svip886.com/api/limit_down.png'
-          const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' })
+          // 增加超时时间
+          const imageUrl = 'https://stock.svip886.com/api/limit_down.png'
+          const imageBuffer = await ctx.http.get(imageUrl, { 
+            responseType: 'arraybuffer',
+            timeout: 15000
+          })
           const base64Image = Buffer.from(imageBuffer).toString('base64')
           return `<img src="data:image/png;base64,${base64Image}" />`
         } catch (error) {
           logger.error('获取跌停看板图片失败:', error)
+          logger.error('错误类型:', error.constructor.name)
+          logger.error('错误消息:', error.message)
+          if (error.message && error.message.includes('timeout')) {
+            return '获取跌停看板图片超时，请检查网络连接后重试。'
+          }
           return '获取跌停看板图片失败，请稍后重试。'
         }
       })
@@ -110,11 +147,20 @@ export class StockCommands {
         }
         
         try {
-          const responseText = await ctx.http.get(`http://stock.svip886.com/api/dyq_${apiEndpoint}`, { responseType: 'text' })
+          // 增加重试机制和更长的超时时间
+          const responseText = await ctx.http.get(`https://stock.svip886.com/api/dyq_${apiEndpoint}`, { 
+            responseType: 'text',
+            timeout: 15000
+          })
           return `🎯 选股结果 (${strategy}): \n\n${responseText}`
         } catch (error) {
           logger.error('获取选股数据失败:', error)
-          return '获取选股数据失败，请稍后重试。'
+          logger.error('错误类型:', error.constructor.name)
+          logger.error('错误消息:', error.message)
+          if (error.message && error.message.includes('timeout')) {
+            return `获取选股数据超时，请检查网络连接后重试。`
+          }
+          return `获取选股数据失败，请稍后重试。`
         }
       })
     

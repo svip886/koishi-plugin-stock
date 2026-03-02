@@ -40,14 +40,14 @@
 ## 插件工作流程
 ### 活跃市值功能：
 1. 用户在聊天中发送"活跃市值"
-2. 插件收到消息后，向 http://stock.svip886.com/api/indexes 发起GET请求
+2. 插件收到消息后，向 https://stock.svip886.com/api/indexes 发起GET请求
 3. 插件接收API返回的文本数据
 4. 插件将数据格式化为"📊 指数看板：\n\n[API返回内容]"并回复给用户
 
 ### 异动分析功能：
 1. 用户在聊天中发送"异动 [股票代码]"（例如：异动 000547）
 2. 插件解析出股票代码
-3. 插件向 http://stock.svip886.com/api/analyze?code=[股票代码] 发起GET请求
+3. 插件向 https://stock.svip886.com/api/analyze?code=[股票代码] 发起GET请求
 4. 插件接收API返回的文本数据
 5. 插件将数据格式化为"📈 股票 [股票代码] 异动分析：\n\n[API返回内容]"并回复给用户
 

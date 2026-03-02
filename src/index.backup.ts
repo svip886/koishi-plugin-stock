@@ -187,7 +187,7 @@ export function apply(ctx: Context, config: Config) {
       // 1. 获取内容
       if (task.content === '活跃市值') {
         try {
-          const responseText = await ctx.http.get('http://stock.svip886.com/api/indexes', { responseType: 'text' });
+          const responseText = await ctx.http.get('https://stock.svip886.com/api/indexes', { responseType: 'text' });
           message = `📊 定时广播 - 指数看板：\n\n${responseText}`;
         } catch (apiErr) {
           logger.error(`${label} 获取活跃市值 API 失败`, apiErr);
@@ -196,7 +196,7 @@ export function apply(ctx: Context, config: Config) {
       } else if (task.content === '涨停看板' || task.content === '跌停看板') {
         try {
           const apiType = task.content === '涨停看板' ? 'limit_up' : 'limit_down';
-          const imageUrl = `http://stock.svip886.com/api/${apiType}.png`;
+          const imageUrl = `https://stock.svip886.com/api/${apiType}.png`;
           const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
           const base64Image = Buffer.from(imageBuffer).toString('base64');
           message = `🔔 定时广播 - ${task.content}：\n<img src="data:image/png;base64,${base64Image}" />`;
@@ -479,7 +479,7 @@ export function apply(ctx: Context, config: Config) {
       try {
         // 使用Koishi的HTTP服务发起请求获取数据
         // 根据测试，API返回的是文本格式而非JSON
-        const responseText = await ctx.http.get('http://stock.svip886.com/api/indexes', { responseType: 'text' })
+        const responseText = await ctx.http.get('https://stock.svip886.com/api/indexes', { responseType: 'text' })
         
         // 直接返回API返回的数据
         return `📊 指数看板：\n\n${responseText}`
@@ -502,7 +502,7 @@ export function apply(ctx: Context, config: Config) {
       
       try {
         // 使用Koishi的HTTP服务发起请求获取数据
-        const responseText = await ctx.http.get(`http://stock.svip886.com/api/analyze?code=${stockCode}`, { responseType: 'text' })
+        const responseText = await ctx.http.get(`https://stock.svip886.com/api/analyze?code=${stockCode}`, { responseType: 'text' })
         
         // 直接返回API返回的数据
         return `📈 股票 ${stockCode} 异动分析：\n\n${responseText}`
@@ -521,7 +521,7 @@ export function apply(ctx: Context, config: Config) {
       
       try {
         // 使用Koishi的HTTP服务下载图片
-        const imageUrl = 'http://stock.svip886.com/api/limit_up.png';
+        const imageUrl = 'https://stock.svip886.com/api/limit_up.png';
         
         // 获取图片的Buffer数据
         const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
@@ -546,7 +546,7 @@ export function apply(ctx: Context, config: Config) {
       
       try {
         // 使用Koishi的HTTP服务下载图片
-        const imageUrl = 'http://stock.svip886.com/api/limit_down.png';
+        const imageUrl = 'https://stock.svip886.com/api/limit_down.png';
         
         // 获取图片的Buffer数据
         const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
@@ -603,7 +603,7 @@ export function apply(ctx: Context, config: Config) {
       
       try {
         // 使用Koishi的HTTP服务发起请求获取数据
-        const apiUrl = `http://stock.svip886.com/api/dyq_select/${apiStrategy}`;
+        const apiUrl = `https://stock.svip886.com/api/dyq_select/${apiStrategy}`;
         const responseText = await ctx.http.get(apiUrl, { responseType: 'text' });
         
         // 直接返回API返回的数据
@@ -784,7 +784,7 @@ export function apply(ctx: Context, config: Config) {
       
       try {
         // 使用Koishi的HTTP服务发起请求获取数据
-        const responseText = await ctx.http.get('http://stock.svip886.com/api/indexes', { responseType: 'text' })
+        const responseText = await ctx.http.get('https://stock.svip886.com/api/indexes', { responseType: 'text' })
         
         // 直接返回API返回的数据
         return `📊 指数看板：\n\n${responseText}`
@@ -804,7 +804,7 @@ export function apply(ctx: Context, config: Config) {
         
         try {
           // 使用Koishi的HTTP服务发起请求获取数据
-          const responseText = await ctx.http.get(`http://stock.svip886.com/api/analyze?code=${stockCode}`, { responseType: 'text' })
+          const responseText = await ctx.http.get(`https://stock.svip886.com/api/analyze?code=${stockCode}`, { responseType: 'text' })
           
           // 直接返回API返回的数据
           return `📈 异动分析：\n\n${responseText}`
@@ -820,7 +820,7 @@ export function apply(ctx: Context, config: Config) {
       
       try {
         // 使用Koishi的HTTP服务下载图片
-        const imageUrl = 'http://stock.svip886.com/api/limit_up.png';
+        const imageUrl = 'https://stock.svip886.com/api/limit_up.png';
         
         // 获取图片的Buffer数据
         const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
@@ -841,7 +841,7 @@ export function apply(ctx: Context, config: Config) {
       
       try {
         // 使用Koishi的HTTP服务下载图片
-        const imageUrl = 'http://stock.svip886.com/api/limit_down.png';
+        const imageUrl = 'https://stock.svip886.com/api/limit_down.png';
         
         // 获取图片的Buffer数据
         const imageBuffer = await ctx.http.get(imageUrl, { responseType: 'arraybuffer' });
@@ -895,7 +895,7 @@ export function apply(ctx: Context, config: Config) {
         
         try {
           // 使用Koishi的HTTP服务发起请求获取数据
-          const apiUrl = `http://stock.svip886.com/api/dyq_select/${apiStrategy}`;
+          const apiUrl = `https://stock.svip886.com/api/dyq_select/${apiStrategy}`;
           const responseText = await ctx.http.get(apiUrl, { responseType: 'text' });
           
           // 直接返回API返回的数据
