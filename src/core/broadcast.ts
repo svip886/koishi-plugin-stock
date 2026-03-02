@@ -1,6 +1,41 @@
 import { Context } from 'koishi'
 import { TradingDayChecker } from '../core/trading-day'
 
+// 带重试机制的HTTP请求函数
+async function httpRequestWithRetry<T = any>(
+  ctx: Context,
+  url: string,
+  options: any,
+  maxRetries: number = 3
+): Promise<T> {
+  const logger = ctx.logger('stock')
+  let lastError: Error = new Error('Unknown error')
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logger.info(`[定时任务] 第${attempt}次尝试请求: ${url}`)
+      const result = await ctx.http.get(url, {
+        ...options,
+        timeout: 10000
+      })
+      logger.info(`[定时任务] 第${attempt}次请求成功`)
+      return result
+    } catch (error) {
+      lastError = error
+      logger.warn(`[定时任务] 第${attempt}次请求失败:`, error.message)
+      
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 1000
+        logger.info(`[定时任务] 等待${delay}ms后进行第${attempt + 1}次重试`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+  }
+  
+  logger.error(`[定时任务] 所有${maxRetries}次重试都失败了`)
+  throw lastError
+}
+
 interface BroadcastTask {
   times: string
   type: 'private' | 'channel'
@@ -33,22 +68,60 @@ export class BroadcastScheduler {
               continue
             }
 
+            // 获取实际数据
+            let messageContent = ''
+            if (task.content === '活跃市值') {
+              try {
+                const responseText = await httpRequestWithRetry(ctx, 'https://stock.svip886.com/api/indexes', { 
+                  responseType: 'text'
+                })
+                messageContent = `📊 指数看板：\n\n${responseText}`
+              } catch (error) {
+                logger.error('[定时任务] 获取活跃市值数据失败:', error)
+                messageContent = '获取活跃市值数据失败，请稍后重试。'
+              }
+            } else if (task.content === '涨停看板') {
+              try {
+                const imageUrl = 'https://stock.svip886.com/api/limit_up.png'
+                const imageBuffer = await httpRequestWithRetry(ctx, imageUrl, { 
+                  responseType: 'arraybuffer'
+                })
+                const base64Image = Buffer.from(imageBuffer).toString('base64')
+                messageContent = `<img src="data:image/png;base64,${base64Image}" />`
+              } catch (error) {
+                logger.error('[定时任务] 获取涨停看板图片失败:', error)
+                messageContent = '获取涨停看板图片失败，请稍后重试。'
+              }
+            } else if (task.content === '跌停看板') {
+              try {
+                const imageUrl = 'https://stock.svip886.com/api/limit_down.png'
+                const imageBuffer = await httpRequestWithRetry(ctx, imageUrl, { 
+                  responseType: 'arraybuffer'
+                })
+                const base64Image = Buffer.from(imageBuffer).toString('base64')
+                messageContent = `<img src="data:image/png;base64,${base64Image}" />`
+              } catch (error) {
+                logger.error('[定时任务] 获取跌停看板图片失败:', error)
+                messageContent = '获取跌停看板图片失败，请稍后重试。'
+              }
+            }
+
             // 执行广播任务
             const targets = task.targetIds.split(',').map(id => id.trim()).filter(id => id)
             
             if (task.type === 'private') {
               targets.forEach(targetId => {
                 ctx.bots.forEach(bot => {
-                  bot.sendPrivateMessage(targetId, `[${task.content}] 定时推送`).catch(e => {
-                    logger.error(`私聊消息发送失败: ${e.message}`)
+                  bot.sendPrivateMessage(targetId, messageContent).catch(e => {
+                    logger.error(`[定时任务] 私聊消息发送失败: ${e.message}`)
                   })
                 })
               })
             } else {
               targets.forEach(targetId => {
                 ctx.bots.forEach(bot => {
-                  bot.sendMessage(targetId, `[${task.content}] 定时推送`).catch(e => {
-                    logger.error(`频道消息发送失败: ${e.message}`)
+                  bot.sendMessage(targetId, messageContent).catch(e => {
+                    logger.error(`[定时任务] 频道消息发送失败: ${e.message}`)
                   })
                 })
               })
