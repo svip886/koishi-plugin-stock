@@ -107,7 +107,7 @@ export class BroadcastScheduler {
             }
 
             // 添加定时广播前缀
-            messageContent = `[定时广播 - ${task.content}] ${messageContent}`
+            messageContent = `[定时广播] ${messageContent}`
 
             // 执行广播任务
             const targets = task.targetIds.split(',').map(id => id.trim()).filter(id => id)
