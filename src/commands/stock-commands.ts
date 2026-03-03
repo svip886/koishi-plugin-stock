@@ -160,18 +160,24 @@ export class StockCommands {
         
         // 映射策略名称到API端点
         const strategyMap: Record<string, string> = {
-          'N型': 'dx',
-          '填坑': 'tk',
-          '少妇': 'sf',
-          '突破': 'tp',
-          '补票': 'bp',
-          '少妇pro': 'sfpro',
-          '1': 'dx',
-          '2': 'tk', 
-          '3': 'sf',
-          '4': 'tp',
-          '5': 'bp',
-          '6': 'sfpro'
+          'N型': 'n_shape',
+          'n_shape': 'n_shape',
+          '1': 'n_shape',
+          '填坑': 'fill_pit',
+          'fill_pit': 'fill_pit',
+          '2': 'fill_pit',
+          '少妇': 'young_woman',
+          'young_woman': 'young_woman',
+          '3': 'young_woman',
+          '突破': 'breakthrough',
+          'breakthrough': 'breakthrough',
+          '4': 'breakthrough',
+          '补票': 'ticket',
+          'ticket': 'ticket',
+          '5': 'ticket',
+          '少妇pro': 'young_woman_pro',
+          'young_woman_pro': 'young_woman_pro',
+          '6': 'young_woman_pro'
         }
         
         const apiEndpoint = strategyMap[strategy]
@@ -181,7 +187,7 @@ export class StockCommands {
         
         try {
           // 使用带重试机制的HTTP请求
-          const responseText = await httpRequestWithRetry(ctx, `https://stock.svip886.com/api/dyq_${apiEndpoint}`, { 
+          const responseText = await httpRequestWithRetry(ctx, `https://stock.svip886.com/api/dyq_select/${apiEndpoint}`, { 
             responseType: 'text'
           })
           return `🎯 选股结果 (${strategy}): \n\n${responseText}`
